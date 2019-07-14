@@ -1,33 +1,3 @@
-QMAKE_CXX.INCDIRS = \
-    . \
-    /public/devel/2018/include \
-    /opt/rh/devtoolset-7/root/usr/include/c++/7 \
-    /opt/rh/devtoolset-7/root/usr/include/c++/7/x86_64-redhat-linux \
-    /opt/rh/devtoolset-7/root/usr/include/c++/7/backward \
-    /opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7/include \
-    /usr/local/include \
-    /opt/rh/devtoolset-7/root/usr/include \
-    /usr/include
-QMAKE_CXX.LIBDIRS = \
-    /public/devel/2018/lib64 \
-    /opt/rh/devtoolset-7/root/usr/lib/gcc/x86_64-redhat-linux/7 \
-    /opt/rh/devtoolset-7/root/usr/lib64 \
-    /lib64 \
-    /usr/lib64 \
-    . \
-    /public/devel/2018/lib \
-    /opt/rh/devtoolset-7/root/usr/lib \
-    /lib \
-    /usr/lib
-QMAKE_CXX.QT_COMPILER_STDCXX = 201402L
-QMAKE_CXX.QMAKE_GCC_MAJOR_VERSION = 7
-QMAKE_CXX.QMAKE_GCC_MINOR_VERSION = 3
-QMAKE_CXX.QMAKE_GCC_PATCH_VERSION = 1
-QMAKE_CXX.COMPILER_MACROS = \
-    QT_COMPILER_STDCXX \
-    QMAKE_GCC_MAJOR_VERSION \
-    QMAKE_GCC_MINOR_VERSION \
-    QMAKE_GCC_PATCH_VERSION
 QMAKE_MAC_SDK.macosx.Path = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk
 QMAKE_MAC_SDK.macosx.PlatformPath = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform
 QMAKE_MAC_SDK.macosx.SDKVersion = 10.14
@@ -47,5 +17,28 @@ QMAKE_MAC_SDK.macx-clang.macosx.QMAKE_LINK_SHLIB = /Applications/Xcode.app/Conte
 QMAKE_MAC_SDK.macx-clang.macosx.QMAKE_ACTOOL = /Applications/Xcode.app/Contents/Developer/usr/bin/actool
 QMAKE_MAC_SDK.macx-clang.macosx.QMAKE_LINK_C = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
 QMAKE_MAC_SDK.macx-clang.macosx.QMAKE_LINK_C_SHLIB = /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+QMAKE_CXX.INCDIRS = \
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1 \
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.0/include \
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include \
+    /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk/usr/include
+QMAKE_CXX.LIBDIRS = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk/usr/lib
+QMAKE_CXX.QT_COMPILER_STDCXX = 199711L
+QMAKE_CXX.QMAKE_APPLE_CC = 6000
+QMAKE_CXX.QMAKE_APPLE_CLANG_MAJOR_VERSION = 10
+QMAKE_CXX.QMAKE_APPLE_CLANG_MINOR_VERSION = 0
+QMAKE_CXX.QMAKE_APPLE_CLANG_PATCH_VERSION = 0
+QMAKE_CXX.QMAKE_GCC_MAJOR_VERSION = 4
+QMAKE_CXX.QMAKE_GCC_MINOR_VERSION = 2
+QMAKE_CXX.QMAKE_GCC_PATCH_VERSION = 1
+QMAKE_CXX.COMPILER_MACROS = \
+    QT_COMPILER_STDCXX \
+    QMAKE_APPLE_CC \
+    QMAKE_APPLE_CLANG_MAJOR_VERSION \
+    QMAKE_APPLE_CLANG_MINOR_VERSION \
+    QMAKE_APPLE_CLANG_PATCH_VERSION \
+    QMAKE_GCC_MAJOR_VERSION \
+    QMAKE_GCC_MINOR_VERSION \
+    QMAKE_GCC_PATCH_VERSION
 QMAKE_XCODE_DEVELOPER_PATH = /Applications/Xcode.app/Contents/Developer
 QMAKE_XCODE_VERSION = 10.1
