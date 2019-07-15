@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <iostream>
 #include "MassPoint.h"
 #include "Triangle.h"
 #include "Cloth.h"
@@ -31,31 +32,41 @@ TEST(MassPoint,userctor)
     EXPECT_FALSE(m2.fixed());
 }
 
+TEST(MassPoint,setMass)
+{
+    MassPoint m;
+    m.setMass(4.0f);
+    EXPECT_FLOAT_EQ(m.mass(), 4.0f);
+}
+
 TEST(Triangle,defaultctor)
 {
     Triangle t;
     EXPECT_TRUE(t.v1() == ngl::Vec3(0.0f));
     EXPECT_TRUE(t.v2() == ngl::Vec3(1.0f, 0.0f, 0.0f));
     EXPECT_TRUE(t.v3() == ngl::Vec3(0.0f, 1.0f, 0.0f));
+    EXPECT_FLOAT_EQ(t.surface_area(), 0.0f);
     EXPECT_TRUE(t.ru() == ngl::Vec3(1.0f));
     EXPECT_TRUE(t.rv() == ngl::Vec3(1.0f));
 }
 
 TEST(Triangle,userctor)
 {
-    Triangle t(ngl::Vec3(2.0f), ngl::Vec3(0.5f), ngl::Vec3(1.0f));
+    Triangle t(ngl::Vec3(2.0f), ngl::Vec3(0.5f), ngl::Vec3(0.0f, 1.0f, 1.0f));
     EXPECT_TRUE(t.v1() == ngl::Vec3(2.0f));
     EXPECT_TRUE(t.v2() == ngl::Vec3(0.5f));
-    EXPECT_TRUE(t.v3() == ngl::Vec3(1.0f));
+    EXPECT_TRUE(t.v3() == ngl::Vec3(0.0f, 1.0f, 1.0f));
+    EXPECT_FLOAT_EQ(t.surface_area(), 1.0606601);
 }
 
 TEST(Triangle,setVertices)
 {
     Triangle t;
-    t.setVertices(ngl::Vec3(2.0f), ngl::Vec3(0.5f), ngl::Vec3(1.0f));
+    t.setVertices(ngl::Vec3(2.0f), ngl::Vec3(0.5f), ngl::Vec3(0.0f, 1.0f, 1.0f));
     EXPECT_TRUE(t.v1() == ngl::Vec3(2.0f));
     EXPECT_TRUE(t.v2() == ngl::Vec3(0.5f));
-    EXPECT_TRUE(t.v3() == ngl::Vec3(1.0f));
+    EXPECT_TRUE(t.v3() == ngl::Vec3(0.0f, 1.0f, 1.0f));
+    EXPECT_FLOAT_EQ(t.surface_area(), 1.0606601);
 }
 
 TEST(Cloth,defaultctor)
@@ -63,4 +74,13 @@ TEST(Cloth,defaultctor)
     Cloth c;
     EXPECT_TRUE(c.numMasses() == 0);
     EXPECT_TRUE(c.numTriangles() == 0);
+}
+
+TEST(Cloth,init)
+{
+    Cloth c;
+    c.init("../gnatvCloth/obj/clothObject.obj");
+    EXPECT_TRUE(c.numMasses() == 900);
+    EXPECT_TRUE(c.numTriangles() == 1682);
+    EXPECT_FLOAT_EQ(c.firstMass(), 0.0029726522);
 }

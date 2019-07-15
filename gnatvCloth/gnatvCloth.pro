@@ -6,14 +6,16 @@ SOURCES+= src/main.cpp \
           src/Cloth.cpp \
           src/MassPoint.cpp \
           src/Triangle.cpp \
-          src/NGLScene.cpp
+          src/NGLScene.cpp \
+          src/NGLSceneMouseControls.cpp
 
 HEADERS+= include/Cloth.h \
           include/MassPoint.h \
           include/Triangle.h \
-          include/defaultClothObject.h \
           include/NGLScene.h \
           include/WindowParams.h
+
+OTHER_FILES+= shaders/*.glsl
 
 INCLUDEPATH+= include
 

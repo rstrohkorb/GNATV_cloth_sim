@@ -15,13 +15,13 @@ public:
     Triangle & operator = (Triangle &&) = default;        // move assignment operator
 
     // User Ctor
-    Triangle(ngl::Vec3 _a, ngl::Vec3 _b, ngl::Vec3 _c) :
-        m_a(_a), m_b(_b), m_c(_c) {;}
+    Triangle(ngl::Vec3 _a, ngl::Vec3 _b, ngl::Vec3 _c);
 
     // Getters/Setters
     ngl::Vec3 v1() const { return m_a; }
     ngl::Vec3 v2() const { return m_b; }
     ngl::Vec3 v3() const { return m_c; }
+    float surface_area() const { return m_sa; }
     ngl::Vec3 ru() const { return m_ru; }
     ngl::Vec3 rv() const { return m_rv; }
 
@@ -36,10 +36,15 @@ private:
     ngl::Vec3 m_b = ngl::Vec3(1.0f, 0.0f, 0.0f);
     ngl::Vec3 m_c = ngl::Vec3(0.0f, 1.0f, 0.0f);
 
+    // surface area
+    float m_sa = 0.0f;
+
     // r-weights
     ngl::Vec3 m_ru = ngl::Vec3(1.0f);
     ngl::Vec3 m_rv = ngl::Vec3(1.0f);
 
+    // Helper functions
+    void update_sa();
 };
 
 #endif

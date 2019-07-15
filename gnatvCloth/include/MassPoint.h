@@ -15,7 +15,7 @@ public:
     MassPoint & operator = (MassPoint &&) = default;        // move assignment operator
 
     // User Ctor
-    MassPoint(ngl::Vec3 _pos, float _mass, bool _fixed = false) :
+    MassPoint(ngl::Vec3 _pos, float _mass = 1.0f, bool _fixed = false) :
         m_pos(_pos), m_mass(_mass), m_fixed(_fixed) {;}
 
     // Getters/setters
@@ -24,6 +24,8 @@ public:
     ngl::Vec3 forces() const { return m_forces; }
     float mass() const { return m_mass; }
     bool fixed() const { return m_fixed; }
+
+    void setMass(const float _mass) { m_mass = _mass; }
 
 private:
     // member variables

@@ -1,7 +1,10 @@
 #ifndef NGLSCENE_H_
 #define NGLSCENE_H_
 #include <ngl/Vec3.h>
+#include <ngl/Mat4.h>
+#include <ngl/AbstractVAO.h>
 #include "WindowParams.h"
+#include "Cloth.h"
 // this must be included after NGL includes else we get a clash with gl libs
 #include <QOpenGLWindow>
 //----------------------------------------------------------------------------------------------------------------------
@@ -50,34 +53,45 @@ private:
     /// @param [in] _event the Qt event to query for size etc
     //----------------------------------------------------------------------------------------------------------------------
     void keyPressEvent(QKeyEvent *_event) override;
-//    //----------------------------------------------------------------------------------------------------------------------
-//    /// @brief this method is called every time a mouse is moved
-//    /// @param _event the Qt Event structure
-//    //----------------------------------------------------------------------------------------------------------------------
-//    void mouseMoveEvent (QMouseEvent * _event ) override;
-//    //----------------------------------------------------------------------------------------------------------------------
-//    /// @brief this method is called everytime the mouse button is pressed
-//    /// inherited from QObject and overridden here.
-//    /// @param _event the Qt Event structure
-//    //----------------------------------------------------------------------------------------------------------------------
-//    void mousePressEvent ( QMouseEvent *_event) override;
-//    //----------------------------------------------------------------------------------------------------------------------
-//    /// @brief this method is called everytime the mouse button is released
-//    /// inherited from QObject and overridden here.
-//    /// @param _event the Qt Event structure
-//    //----------------------------------------------------------------------------------------------------------------------
-//    void mouseReleaseEvent ( QMouseEvent *_event ) override;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief this method is called every time a mouse is moved
+    /// @param _event the Qt Event structure
+    //----------------------------------------------------------------------------------------------------------------------
+    void mouseMoveEvent (QMouseEvent * _event ) override;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief this method is called everytime the mouse button is pressed
+    /// inherited from QObject and overridden here.
+    /// @param _event the Qt Event structure
+    //----------------------------------------------------------------------------------------------------------------------
+    void mousePressEvent ( QMouseEvent *_event) override;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief this method is called everytime the mouse button is released
+    /// inherited from QObject and overridden here.
+    /// @param _event the Qt Event structure
+    //----------------------------------------------------------------------------------------------------------------------
+    void mouseReleaseEvent ( QMouseEvent *_event ) override;
 
-//    //----------------------------------------------------------------------------------------------------------------------
-//    /// @brief this method is called everytime the mouse wheel is moved
-//    /// inherited from QObject and overridden here.
-//    /// @param _event the Qt Event structure
-//    //----------------------------------------------------------------------------------------------------------------------
-//    void wheelEvent( QWheelEvent *_event) override;
+    //----------------------------------------------------------------------------------------------------------------------
+    /// @brief this method is called everytime the mouse wheel is moved
+    /// inherited from QObject and overridden here.
+    /// @param _event the Qt Event structure
+    //----------------------------------------------------------------------------------------------------------------------
+    void wheelEvent( QWheelEvent *_event) override;
     /// @brief windows parameters for mouse control etc.
     WinParams m_win;
     /// position for our model
     ngl::Vec3 m_modelPos;
+
+    // Cloth object
+    Cloth m_cloth;
+    /// view matrix
+    ngl::Mat4 m_view;
+    /// project matrix
+    ngl::Mat4 m_project;
+    /// VAO for the cloth triangles
+    std::unique_ptr<ngl::AbstractVAO> m_clothVAO;
+    /// load matrix to shader
+    void loadMatrixToShader(const ngl::Mat4 &_tx, const ngl::Vec4 &_color);
 
 };
 
