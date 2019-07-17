@@ -3,6 +3,8 @@
 
 #include <ngl/Vec3.h>
 
+enum initOrientation { XY, XZ, YZ };
+
 class Triangle
 {
 public:
@@ -27,6 +29,8 @@ public:
 
     void setVertices(const ngl::Vec3 _a, const ngl::Vec3 _b, const ngl::Vec3 _c);
 
+    // compute r-weights
+    void computeR(initOrientation _o);
 
 private:
     // Member Variables

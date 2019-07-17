@@ -83,7 +83,7 @@ private:
     ngl::Vec3 m_modelPos;
 
     // Cloth object
-    Cloth m_cloth;
+    Cloth m_cloth = Cloth(AbstractClothMaterial(0.15f));
     /// view matrix
     ngl::Mat4 m_view;
     /// project matrix

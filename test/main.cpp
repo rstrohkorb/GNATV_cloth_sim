@@ -2,6 +2,7 @@
 #include <iostream>
 #include "MassPoint.h"
 #include "Triangle.h"
+#include "WoolMaterial.h"
 #include "Cloth.h"
 
 int main(int argc, char **argv)
@@ -69,17 +70,51 @@ TEST(Triangle,setVertices)
     EXPECT_FLOAT_EQ(t.surface_area(), 1.0606601);
 }
 
-TEST(Cloth,defaultctor)
+TEST(Triangle,computeR)
 {
-    Cloth c;
+    Triangle t1(ngl::Vec3(2.0f, 2.0f, 0.0f), ngl::Vec3(0.5f, 0.5f, 0.0f), ngl::Vec3(0.0f, 1.0f, 0.0f));
+    Triangle t2(ngl::Vec3(2.0f, 0.0f, 2.0f), ngl::Vec3(0.5f, 0.0f, 0.5f), ngl::Vec3(0.0f, 0.0f, 1.0f));
+    Triangle t3(ngl::Vec3(0.0f, 2.0f, 2.0f), ngl::Vec3(0.0f, 0.5f, 0.5f), ngl::Vec3(0.0f, 0.0f, 1.0f));
+    t1.computeR(XY);
+    t2.computeR(XZ);
+    t3.computeR(YZ);
+    EXPECT_TRUE(t1.ru() == t2.ru() && t1.ru() == t3.ru());
+    EXPECT_TRUE(t1.rv() == t2.rv() && t1.rv() == t3.rv());
+    EXPECT_TRUE(t1.ru() == ngl::Vec3(-0.333333f, -0.6666667f, 1.0f));
+    EXPECT_TRUE(t1.rv() == ngl::Vec3(-0.333333f, 1.3333333f, -1.0f));
+}
+
+TEST(WoolMaterial,defaultctor)
+{
+    WoolMaterial wm;
+    EXPECT_FLOAT_EQ(wm.mass(), 0.15f);
+}
+
+TEST(WoolMaterial,strainStressFuncs)
+{
+    WoolMaterial wm;
+    EXPECT_FLOAT_EQ(wm.weft(0.06f), 159.03156f);
+    EXPECT_FLOAT_EQ(wm.warp(0.06f), 202199.66f);
+    EXPECT_FLOAT_EQ(wm.shear(0.06f), 16.171333f);
+    EXPECT_FLOAT_EQ(wm.weftPrime(0.06f), 6573.33f);
+    EXPECT_FLOAT_EQ(wm.warpPrime(0.06f), 1.0329829e7f);
+    EXPECT_FLOAT_EQ(wm.shearPrime(0.06f), 339.02673f);
+}
+
+TEST(Cloth,userctor)
+{
+    WoolMaterial wm;
+    Cloth c(wm);
     EXPECT_TRUE(c.numMasses() == 0);
     EXPECT_TRUE(c.numTriangles() == 0);
+    EXPECT_FLOAT_EQ(c.mass(), 0.15f);
 }
 
 TEST(Cloth,init)
 {
-    Cloth c;
-    c.init("../gnatvCloth/obj/clothObject.obj");
+    WoolMaterial wm;
+    Cloth c(wm);
+    c.init("../gnatvCloth/obj/clothObject.obj", XY);
     EXPECT_TRUE(c.numMasses() == 900);
     EXPECT_TRUE(c.numTriangles() == 1682);
     EXPECT_FLOAT_EQ(c.firstMass(), 0.0029726522);
