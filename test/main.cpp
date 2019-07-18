@@ -19,6 +19,8 @@ TEST(MassPoint,defaultctor)
     EXPECT_TRUE(m.forces() == ngl::Vec3(0.0f));
     EXPECT_FLOAT_EQ(m.mass(), 1.0f);
     EXPECT_FALSE(m.fixed());
+    EXPECT_TRUE(m.numJacobians() == 0);
+    EXPECT_TRUE(m.nullJacobians());
 }
 
 TEST(MassPoint,userctor)
@@ -38,6 +40,29 @@ TEST(MassPoint,setMass)
     MassPoint m;
     m.setMass(4.0f);
     EXPECT_FLOAT_EQ(m.mass(), 4.0f);
+}
+
+TEST(MassPoint,forceModifiers)
+{
+    MassPoint m;
+    m.addForce(ngl::Vec3(1.0f));
+    EXPECT_TRUE(m.forces() == ngl::Vec3(1.0f));
+    m.addForce(ngl::Vec3(1.0f));
+    EXPECT_TRUE(m.forces() == ngl::Vec3(2.0f));
+    m.resetForce();
+    EXPECT_TRUE(m.forces() == ngl::Vec3(0.0f));
+}
+
+TEST(MassPoint,jacobianModifiers)
+{
+    MassPoint m;
+    m.addJacobian(2, ngl::Mat3(1.0f));
+    EXPECT_FALSE(m.nullJacobians());
+    EXPECT_TRUE(m.numJacobians() == 1);
+    EXPECT_TRUE(m.fetchJacobian(2) == ngl::Mat3(1.0f));
+    m.resetJacobians();
+    EXPECT_TRUE(m.numJacobians() == 1);
+    EXPECT_TRUE(m.nullJacobians());
 }
 
 TEST(Triangle,defaultctor)

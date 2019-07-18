@@ -34,6 +34,9 @@ public:
     // Render
     void render(std::vector<ngl::Vec3> &o_vertexData);
 
+    // Run simulation
+    void update(float _h);
+
 private:
     // Struct for storing triangle reference points
     struct Triref
@@ -50,6 +53,8 @@ private:
 
     // Helper Functions
     void readObj(std::string _filename);
+    void forceCalcPerTriangle(Triref tr);
+    ngl::Mat3 vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b);
 };
 
 #endif
