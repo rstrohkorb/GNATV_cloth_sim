@@ -25,8 +25,8 @@ TEST(MassPoint,defaultctor)
 
 TEST(MassPoint,userctor)
 {
-    MassPoint m1(ngl::Vec3(1.0f), 0.4f, true);
-    MassPoint m2(ngl::Vec3(1.0f), 0.4f);
+    MassPoint m1(ngl::Vec3(1.0f), 0, 0.4f, true);
+    MassPoint m2(ngl::Vec3(1.0f), 0, 0.4f);
     EXPECT_TRUE(m1.pos() == ngl::Vec3(1.0f));
     EXPECT_FLOAT_EQ(m1.mass(), 0.4f);
     EXPECT_TRUE(m1.fixed());
@@ -35,11 +35,15 @@ TEST(MassPoint,userctor)
     EXPECT_FALSE(m2.fixed());
 }
 
-TEST(MassPoint,setMass)
+TEST(MassPoint,setVariables)
 {
     MassPoint m;
     m.setMass(4.0f);
+    m.setPos(ngl::Vec3(2.2f));
+    m.setVel(ngl::Vec3(3.0f));
     EXPECT_FLOAT_EQ(m.mass(), 4.0f);
+    EXPECT_TRUE(m.pos() == ngl::Vec3(2.2f));
+    EXPECT_TRUE(m.vel() == ngl::Vec3(3.0f));
 }
 
 TEST(MassPoint,forceModifiers)
@@ -60,9 +64,28 @@ TEST(MassPoint,jacobianModifiers)
     EXPECT_FALSE(m.nullJacobians());
     EXPECT_TRUE(m.numJacobians() == 1);
     EXPECT_TRUE(m.fetchJacobian(2) == ngl::Mat3(1.0f));
+    m.multJacobians(0.5f);
+    EXPECT_TRUE(m.fetchJacobian(2) == ngl::Mat3(0.5f));
+    std::vector<size_t> keytest;
+    keytest.push_back(2);
+    EXPECT_TRUE(m.jacobainKeys() == keytest);
     m.resetJacobians();
     EXPECT_TRUE(m.numJacobians() == 1);
     EXPECT_TRUE(m.nullJacobians());
+}
+
+TEST(MassPoint,jacobianVectorMult)
+{
+    MassPoint m(ngl::Vec3(0.0f), 0, 0.5f);
+    m.addJacobian(0, ngl::Mat3(1.0f));
+    m.addJacobian(2, ngl::Mat3(1.0f));
+    std::unordered_map<size_t, ngl::Vec3> testmap;
+    testmap[0] = ngl::Vec3(2.0f);
+    testmap[2] = ngl::Vec3(3.0f);
+    auto resA = m.jacobianVectorMult(true, testmap);
+    auto resNotA = m.jacobianVectorMult(false, testmap);
+    EXPECT_TRUE(resA == ngl::Vec3(-4.0f));
+    EXPECT_TRUE(resNotA == ngl::Vec3(5.0f));
 }
 
 TEST(Triangle,defaultctor)

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <numeric>
+#include <unordered_map>
 #include <boost/algorithm/string.hpp>
 #include "Cloth.h"
 
@@ -45,7 +46,7 @@ void Cloth::render(std::vector<ngl::Vec3> &o_vertexData)
     }
 }
 
-void Cloth::update(float _h)
+void Cloth::update(float _h, ngl::Vec3 _externalf)
 {
     // STEP 0 - ZERO OUT CURRENT FORCES/JACOBIANS ON EACH MASSPOINT
     for(auto& m : m_mspts)
@@ -53,13 +54,48 @@ void Cloth::update(float _h)
         m.resetForce();
         m.resetJacobians();
     }
-    // STEP 1 - FORCE CALCULATIONS PER-TRIANGLE
+    // STEP 1 - INTERNAL FORCE CALCULATIONS PER-TRIANGLE
     for(auto tr : m_triangles)
     {
-        // adds force and jacobian contributions for each point in the triangle
         forceCalcPerTriangle(tr);
     }
-    // STEP 2 - LET'S INTEGRATE
+    // testing - output current forces
+    std::cout<<"forces 0x: "<<m_mspts[0].forces().m_x << '\n';
+    std::cout<<"forces 0y: "<<m_mspts[0].forces().m_y << '\n';
+    std::cout<<"forces 0z: "<<m_mspts[0].forces().m_z << '\n';
+    // STEP 2 - ADD EXTERNAL FORCES
+    ngl::Vec3 fgravity, airRes;
+    fgravity = ngl::Vec3(0.0f, 9.8f, 0.0f);
+    //fgravity.normalize();
+    //_externalf.normalize();
+    for(auto &m : m_mspts)
+    {
+        airRes = m.vel();
+        if(airRes != ngl::Vec3(0.0f))
+        {
+            airRes.normalize();
+            airRes *= -1.0f * m.vel().lengthSquared();
+        }
+        m.addForce((fgravity * m.mass()) + airRes + _externalf);
+    }
+    std::cout<<"post forces 0x: "<<m_mspts[0].forces().m_x << '\n';
+    std::cout<<"post forces 0y: "<<m_mspts[0].forces().m_y << '\n';
+    std::cout<<"post forces 0z: "<<m_mspts[0].forces().m_z << '\n';
+    // STEP 3 - LET'S INTEGRATE
+    auto deltaVel = conjugateGradient(_h);
+    // STEP 4 - UPDATE PARTICLE VELOCITIES AND POSITIONS
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        auto newVel = m_mspts[i].vel() + deltaVel[i];
+        auto newPos = m_mspts[i].pos() + (_h * newVel);
+        m_mspts[i].setVel(newVel);
+        m_mspts[i].setPos(newPos);
+    }
+    // STEP 5 - CLEANUP AND STATE HANDLING
+    for(auto& tr : m_triangles)
+    {
+        tr.tri.setVertices(m_mspts[tr.a].pos(), m_mspts[tr.b].pos(), m_mspts[tr.c].pos());
+    }
 }
 
 void Cloth::readObj(std::string _filename)
@@ -69,6 +105,7 @@ void Cloth::readObj(std::string _filename)
     std::string line;
     clothFile.open(_filename);
     // read each line
+    size_t mass_counter = 0;
     while(std::getline(clothFile, line))
     {
         switch(line[0])
@@ -82,9 +119,10 @@ void Cloth::readObj(std::string _filename)
             p0 = std::stof(res[1]);
             p1 = std::stof(res[2]);
             p2 = std::stof(res[3]);
-            // Create masspoint with that position
-            MassPoint m (ngl::Vec3(p0, p1, p2));
+            // Create masspoint with that position, store self id
+            MassPoint m (ngl::Vec3(p0, p1, p2), mass_counter);
             m_mspts.push_back(m);
+            ++mass_counter;
         }
         break;
         case 'f':
@@ -113,6 +151,8 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     rv = tr.tri.rv();
     U = (ru.m_x * tr.tri.v1()) + (ru.m_y * tr.tri.v2()) + (ru.m_z * tr.tri.v3());
     V = (rv.m_x * tr.tri.v1()) + (rv.m_y * tr.tri.v2()) + (rv.m_z * tr.tri.v3());
+    U.normalize();
+    V.normalize();
     // 1.2 - ACQUIRE STRAIN VALUES
     ngl::Vec3 strain;
     strain.m_x = 0.5f * (U.dot(U) - 1);
@@ -174,6 +214,77 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     m_mspts[tr.c].addJacobian(tr.c, Jcc);
 }
 
+std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
+{
+    // 3.1 - PREMULTIPLY EVERY J-MATRIX BY H^2
+    for(auto &m : m_mspts)
+    {
+        m.multJacobians(_h * _h);
+    }
+    // 3.2 - SET INITIAL VALUES
+    std::vector<ngl::Vec3> r, p, vel, hforce, x, Ap;
+    r.resize(m_mspts.size());
+    vel.reserve(m_mspts.size());
+    hforce.reserve(m_mspts.size());
+    x.resize(m_mspts.size());
+    Ap.reserve(m_mspts.size());
+    // set velocity and force vectors
+    for(auto m : m_mspts)
+    {
+        vel.push_back(m.vel());
+        hforce.push_back(m.forces() * _h);
+    }
+    // set initial r = b = hf + h^2Jv
+    auto jvt = jMatrixMultOp(false, vel);
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        r[i] = hforce[i] + jvt[i];
+    }
+    // other loop variables
+    p = r;
+    ngl::Mat3 alpha, rsold, rsnew;
+    rsold = vecVecDotOp(r, r);
+    float epsilon = 1e-10f;
+    size_t k = 0;
+    // 3.3 - CONJUGATE GRADIENT METHOD LOOP
+    do
+    {
+        Ap = jMatrixMultOp(true, p);
+        alpha = divMat3(rsold, vecVecDotOp(p, Ap));
+        for(size_t i = 0; i < m_mspts.size(); ++i)
+        {
+            x[i] += alpha * p[i];
+            r[i] = r[i] - (alpha * Ap[i]);
+        }
+        rsnew = vecVecDotOp(r, r);
+        for(size_t i = 0; i < m_mspts.size(); ++i)
+        {
+            p[i] = r[i] + (divMat3(rsnew, rsold) * p[i]);
+        }
+        ++k;
+        rsold = rsnew;
+    } while(gtMat3(rsnew, rsold * (epsilon * epsilon)));
+
+//    while(sqrt(static_cast<double>(rsold)) > epsilon)
+//    {
+//        Ap = jMatrixMultOp(true, p);
+//        alpha = rsold / vecVecDotOp(p, Ap);
+//        for(size_t i = 0; i < m_mspts.size(); ++i)
+//        {
+//            x[i] += alpha * p[i];
+//            r[i] = r[i] - (alpha * Ap[i]);
+//        }
+//        rsnew = vecVecDotOp(r, r);
+//        for(size_t i = 0; i < m_mspts.size(); ++i)
+//        {
+//            p[i] = r[i] + ((rsnew/rsold) * p[i]);
+//        }
+//        ++k;
+//        rsold = rsnew;
+//    }
+    return x;
+}
+
 ngl::Mat3 Cloth::vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b)
 {
     ngl::Mat3 ret;
@@ -187,4 +298,126 @@ ngl::Mat3 Cloth::vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b)
     ret.m_21 = _a.m_z * _b.m_y;
     ret.m_22 = _a.m_z * _b.m_z;
     return ret;
+}
+
+std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec)
+{
+    std::vector<ngl::Vec3> nvec;
+    nvec.resize(_vec.size());
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        // grab the values of _vec needed for multiplying with the J-matrices of this mass
+        std::unordered_map<size_t, ngl::Vec3> vecPass;
+        auto keys = m_mspts[i].jacobainKeys();
+        for(auto k : keys)
+        {
+            vecPass[k] = _vec[k];
+        }
+        // pass them into the masspoint for the vector multiplication
+        nvec[i] = m_mspts[i].jacobianVectorMult(_isA, vecPass);
+    }
+    return nvec;
+}
+
+ngl::Mat3 Cloth::vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b)
+{
+    ngl::Mat3 result = ngl::Mat3(0.0f);
+    for(size_t i = 0; i < _a.size(); ++i)
+    {
+        result += vecVecTranspose(_a[i], _b[i]);
+    }
+    return result;
+}
+
+ngl::Mat3 Cloth::divMat3(ngl::Mat3 _a, ngl::Mat3 _b)
+{
+    ngl::Mat3 res;
+    if(FCompare(_b.m_00, 0.0f))
+    {
+        res.m_00 = 0.0f;
+    }
+    else
+    {
+        res.m_00 = _a.m_00 / _b.m_00;
+    }
+    if(FCompare(_b.m_01, 0.0f))
+    {
+        res.m_01 = 0.0f;
+    }
+    else
+    {
+        res.m_01 = _a.m_01 / _b.m_01;
+    }
+    if(FCompare(_b.m_02, 0.0f))
+    {
+        res.m_02 = 0.0f;
+    }
+    else
+    {
+        res.m_02 = _a.m_02 / _b.m_02;
+    }
+    if(FCompare(_b.m_10, 0.0f))
+    {
+        res.m_10 = 0.0f;
+    }
+    else
+    {
+        res.m_10 = _a.m_10 / _b.m_10;
+    }
+    if(FCompare(_b.m_11, 0.0f))
+    {
+        res.m_11 = 0.0f;
+    }
+    else
+    {
+        res.m_11 = _a.m_11 / _b.m_11;
+    }
+    if(FCompare(_b.m_12, 0.0f))
+    {
+        res.m_12 = 0.0f;
+    }
+    else
+    {
+        res.m_12 = _a.m_12 / _b.m_12;
+    }
+    if(FCompare(_b.m_20, 0.0f))
+    {
+        res.m_20 = 0.0f;
+    }
+    else
+    {
+        res.m_20 = _a.m_20 / _b.m_20;
+    }
+    if(FCompare(_b.m_21, 0.0f))
+    {
+        res.m_21 = 0.0f;
+    }
+    else
+    {
+        res.m_21 = _a.m_21 / _b.m_21;
+    }
+    if(FCompare(_b.m_22, 0.0f))
+    {
+        res.m_22 = 0.0f;
+    }
+    else
+    {
+        res.m_22 = _a.m_22 / _b.m_22;
+    }
+    return res;
+}
+
+bool Cloth::gtMat3(ngl::Mat3 _a, ngl::Mat3 _b)
+{
+    bool b0, b1, b2, b3, b4, b5, b6, b7, b8;
+    b0 = _a.m_00 > _b.m_00;
+    b1 = _a.m_01 > _b.m_01;
+    b2 = _a.m_02 > _b.m_02;
+    b3 = _a.m_10 > _b.m_10;
+    b4 = _a.m_11 > _b.m_11;
+    b5 = _a.m_12 > _b.m_12;
+    b6 = _a.m_20 > _b.m_20;
+    b7 = _a.m_21 > _b.m_21;
+    b8 = _a.m_22 > _b.m_22;
+    return b0 && b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8;
 }

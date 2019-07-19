@@ -35,7 +35,7 @@ public:
     void render(std::vector<ngl::Vec3> &o_vertexData);
 
     // Run simulation
-    void update(float _h);
+    void update(float _h, ngl::Vec3 _externalf);
 
 private:
     // Struct for storing triangle reference points
@@ -54,7 +54,12 @@ private:
     // Helper Functions
     void readObj(std::string _filename);
     void forceCalcPerTriangle(Triref tr);
+    std::vector<ngl::Vec3> conjugateGradient(float _h);
     ngl::Mat3 vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b);
+    std::vector<ngl::Vec3> jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec);
+    ngl::Mat3 vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b);
+    ngl::Mat3 divMat3(ngl::Mat3 _a, ngl::Mat3 _b);
+    bool gtMat3(ngl::Mat3 _a, ngl::Mat3 _b);
 };
 
 #endif

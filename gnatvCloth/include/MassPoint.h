@@ -17,8 +17,8 @@ public:
     MassPoint & operator = (MassPoint &&) = default;        // move assignment operator
 
     // User Ctor
-    MassPoint(ngl::Vec3 _pos, float _mass = 1.0f, bool _fixed = false) :
-        m_pos(_pos), m_mass(_mass), m_fixed(_fixed) {;}
+    MassPoint(ngl::Vec3 _pos, size_t _selfId = 0, float _mass = 1.0f, bool _fixed = false) :
+        m_pos(_pos), m_self(_selfId), m_mass(_mass), m_fixed(_fixed) {;}
 
     // Getters/setters
     ngl::Vec3 pos() const { return m_pos; }
@@ -27,14 +27,22 @@ public:
     float mass() const { return m_mass; }
     bool fixed() const { return m_fixed; }
     size_t numJacobians() const { return m_jacobians.size(); }
-    bool nullJacobians();                // returns true if all the jacobians are zero or empty map
+    ngl::Mat3 fetchJacobian(size_t _id) { return m_jacobians[_id]; } // not safe, for testing only
 
+    void setPos(const ngl::Vec3 _pos) { m_pos = _pos; }
+    void setVel(const ngl::Vec3 _vel) { m_vel = _vel; }
     void setMass(const float _mass) { m_mass = _mass; }
     void resetForce() { m_forces = ngl::Vec3(0.0f); }
     void addForce(const ngl::Vec3 _force) { m_forces += _force; }
-    void resetJacobians();
-    void addJacobian(const size_t _id, const ngl::Mat3 _jacobian);
-    ngl::Mat3 fetchJacobian(size_t _id) { return m_jacobians[_id]; } // not safe, for testing only
+
+    // Jacobian operators
+    bool nullJacobians();                                           // returns true if all the jacobians are zero or empty map
+    std::vector<size_t> jacobainKeys() const;                       // fetches all the keys for currently stored jacobians
+    void resetJacobians();                                          // zeros out all currently stored jacobians
+    void addJacobian(const size_t _id, const ngl::Mat3 _jacobian);  // add this jacobian to the running total for this id
+    void multJacobians(const float _hsq);                           // multiply all jacobians by the input value
+    ngl::Vec3 jacobianVectorMult(const bool _isA,
+                                 std::unordered_map<size_t, ngl::Vec3> _vec);   // multiply the input vector by our jacobian vector
 
 private:
     // member variables
@@ -42,6 +50,7 @@ private:
     ngl::Vec3 m_vel = ngl::Vec3(0.0f);
     ngl::Vec3 m_forces = ngl::Vec3(0.0f);
     std::unordered_map<size_t, ngl::Mat3> m_jacobians;
+    size_t m_self = 0;
     float m_mass = 1.0f;
     bool m_fixed = false;
 };

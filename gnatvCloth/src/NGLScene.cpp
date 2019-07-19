@@ -26,7 +26,11 @@ NGLScene::~NGLScene()
   std::cout<<"Shutting down NGL, removing VAO's and Shaders\n";
 }
 
-
+void NGLScene::timerEvent(QTimerEvent *_event)
+{
+    m_cloth.update(0.5f, ngl::Vec3(0.0f));
+    update();
+}
 
 void NGLScene::resizeGL(int _w , int _h)
 {
@@ -116,6 +120,9 @@ void NGLScene::keyPressEvent(QKeyEvent *_event)
       m_modelPos.set(ngl::Vec3::zero());
 
   break;
+  case Qt::Key_P :
+      startTimer(7);
+      break;
   default : break;
   }
   // finally update the GLWindow and re-draw
