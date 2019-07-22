@@ -17,7 +17,8 @@ HEADERS+= include/Cloth.h \
           include/NGLScene.h \
           include/WindowParams.h \
           include/AbstractClothMaterial.h \
-          include/WoolMaterial.h
+          include/WoolMaterial.h \
+          include/Materials.h
 
 OTHER_FILES+= shaders/*.glsl
 
