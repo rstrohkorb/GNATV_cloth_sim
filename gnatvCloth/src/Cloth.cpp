@@ -3,7 +3,28 @@
 #include <numeric>
 #include <unordered_map>
 #include <boost/algorithm/string.hpp>
+#include "Materials.h"
 #include "Cloth.h"
+
+Cloth::Cloth(material_type _mt)
+{
+    // set mass and equation values for material
+    m_material = _mt;
+    switch(_mt)
+    {
+    case WOOL:
+    {
+        m_mass = wool_mass;
+        m_weft = boost::math::cubic_b_spline<float>(wool_weftData.begin(), wool_weftData.end(),
+                                                    wool_weftStart, wool_weftStep, 0.0f);
+        m_warp = boost::math::cubic_b_spline<float>(wool_warpData.begin(), wool_warpData.end(),
+                                                    wool_warpStart, wool_warpStep, 0.0f);
+        m_shear = boost::math::cubic_b_spline<float>(wool_shearData.begin(), wool_shearData.end(),
+                                                     wool_shearStart, wool_shearStep, wool_shearSlope, wool_shearSlope);
+    }
+    break;
+    }
+}
 
 void Cloth::init(std::string _filename, initOrientation _o)
 {
@@ -21,7 +42,7 @@ void Cloth::init(std::string _filename, initOrientation _o)
     // accumulate masses of triangles connected to each masspoint
     for(auto t : m_triangles)
     {
-        auto tmass = t.tri.surface_area() * m_material.mass();
+        auto tmass = t.tri.surface_area() * m_mass;
         massCollect[t.a].push_back(tmass);
         massCollect[t.b].push_back(tmass);
         massCollect[t.c].push_back(tmass);
@@ -60,13 +81,16 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
         forceCalcPerTriangle(tr);
     }
     // testing - output current forces
-    std::cout<<"forces 0x: "<<m_mspts[0].forces().m_x << '\n';
-    std::cout<<"forces 0y: "<<m_mspts[0].forces().m_y << '\n';
-    std::cout<<"forces 0z: "<<m_mspts[0].forces().m_z << '\n';
+//    std::cout<<"forces 0x: "<<m_mspts[0].forces().m_x << '\n';
+//    std::cout<<"forces 0y: "<<m_mspts[0].forces().m_y << '\n';
+//    std::cout<<"forces 0z: "<<m_mspts[0].forces().m_z << '\n';
+//    std::cout<<"forces 434x: "<<m_mspts[434].forces().m_x << '\n';
+//    std::cout<<"forces 434y: "<<m_mspts[434].forces().m_y << '\n';
+//    std::cout<<"forces 434z: "<<m_mspts[434].forces().m_z << '\n';
     // STEP 2 - ADD EXTERNAL FORCES
     ngl::Vec3 fgravity, airRes;
     fgravity = ngl::Vec3(0.0f, 9.8f, 0.0f);
-    //fgravity.normalize();
+    fgravity.normalize();
     //_externalf.normalize();
     for(auto &m : m_mspts)
     {
@@ -78,9 +102,9 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
         }
         m.addForce((fgravity * m.mass()) + airRes + _externalf);
     }
-    std::cout<<"post forces 0x: "<<m_mspts[0].forces().m_x << '\n';
-    std::cout<<"post forces 0y: "<<m_mspts[0].forces().m_y << '\n';
-    std::cout<<"post forces 0z: "<<m_mspts[0].forces().m_z << '\n';
+//    std::cout<<"post forces 0x: "<<m_mspts[0].forces().m_x << '\n';
+//    std::cout<<"post forces 0y: "<<m_mspts[0].forces().m_y << '\n';
+//    std::cout<<"post forces 0z: "<<m_mspts[0].forces().m_z << '\n';
     // STEP 3 - LET'S INTEGRATE
     auto deltaVel = conjugateGradient(_h);
     // STEP 4 - UPDATE PARTICLE VELOCITIES AND POSITIONS
@@ -151,18 +175,30 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     rv = tr.tri.rv();
     U = (ru.m_x * tr.tri.v1()) + (ru.m_y * tr.tri.v2()) + (ru.m_z * tr.tri.v3());
     V = (rv.m_x * tr.tri.v1()) + (rv.m_y * tr.tri.v2()) + (rv.m_z * tr.tri.v3());
-    U.normalize();
-    V.normalize();
+    //U.normalize();
+    //V.normalize();
     // 1.2 - ACQUIRE STRAIN VALUES
     ngl::Vec3 strain;
     strain.m_x = 0.5f * (U.dot(U) - 1);
     strain.m_y = 0.5f * (V.dot(V) - 1);
     strain.m_z = U.dot(V);
+    // Enforce strain uu and vv >= 0, and handle near-zero values
+    strain = cleanNearZero(strain);
+    if(strain.m_x < 0.0f)
+    {
+        strain.m_x = 0.0f;
+    }
+    if(strain.m_y < 0.0f)
+    {
+        strain.m_y = 0.0f;
+    }
     // 1.3 - ACQUIRE STRESS VALUES
     ngl::Vec3 stress;
-    stress.m_x = m_material.weft(strain.m_x);
-    stress.m_y = m_material.warp(strain.m_y);
-    stress.m_z = m_material.shear(strain.m_z);
+    stress.m_x = m_weft(strain.m_x);
+    stress.m_y = m_warp(strain.m_y);
+    stress.m_z = m_shear(strain.m_z);
+    // handle near-zero values
+    stress = cleanNearZero(stress);
     // 1.4 - COMPUTE FORCE CONTRIBUTIONS
     ngl::Vec3 fa, fb, fc;
     auto nd = -1 * tr.tri.surface_area();
@@ -180,9 +216,9 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     // 1.6 - COMPUTE JACOBIAN CONTRIBUTIONS
     ngl::Mat3 Jaa, Jab, Jac, Jbb, Jbc, Jcc, UUt, VVt, UVt, VUt;
     ngl::Vec3 stressPrime;
-    stressPrime.m_x = m_material.weftPrime(strain.m_x);
-    stressPrime.m_y = m_material.warpPrime(strain.m_y);
-    stressPrime.m_z = m_material.shearPrime(strain.m_z);
+    stressPrime.m_x = m_weft.prime(strain.m_x);
+    stressPrime.m_y = m_warp.prime(strain.m_y);
+    stressPrime.m_z = m_shear.prime(strain.m_z);
     UUt = vecVecTranspose(U, U);
     VVt = vecVecTranspose(V, V);
     UVt = vecVecTranspose(U, V);
@@ -242,33 +278,16 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
     }
     // other loop variables
     p = r;
-    ngl::Mat3 alpha, rsold, rsnew;
+    //ngl::Mat3 alpha, rsold, rsnew;
+    float alpha, rsold, rsnew;
     rsold = vecVecDotOp(r, r);
-    float epsilon = 1e-10f;
+    float epsilon = 1e-5f;
     size_t k = 0;
     // 3.3 - CONJUGATE GRADIENT METHOD LOOP
-    do
-    {
-        Ap = jMatrixMultOp(true, p);
-        alpha = divMat3(rsold, vecVecDotOp(p, Ap));
-        for(size_t i = 0; i < m_mspts.size(); ++i)
-        {
-            x[i] += alpha * p[i];
-            r[i] = r[i] - (alpha * Ap[i]);
-        }
-        rsnew = vecVecDotOp(r, r);
-        for(size_t i = 0; i < m_mspts.size(); ++i)
-        {
-            p[i] = r[i] + (divMat3(rsnew, rsold) * p[i]);
-        }
-        ++k;
-        rsold = rsnew;
-    } while(gtMat3(rsnew, rsold * (epsilon * epsilon)));
-
-//    while(sqrt(static_cast<double>(rsold)) > epsilon)
+//    do
 //    {
 //        Ap = jMatrixMultOp(true, p);
-//        alpha = rsold / vecVecDotOp(p, Ap);
+//        alpha = divMat3(rsold, vecVecDotOp(p, Ap));
 //        for(size_t i = 0; i < m_mspts.size(); ++i)
 //        {
 //            x[i] += alpha * p[i];
@@ -277,11 +296,29 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
 //        rsnew = vecVecDotOp(r, r);
 //        for(size_t i = 0; i < m_mspts.size(); ++i)
 //        {
-//            p[i] = r[i] + ((rsnew/rsold) * p[i]);
+//            p[i] = r[i] + (divMat3(rsnew, rsold) * p[i]);
 //        }
 //        ++k;
 //        rsold = rsnew;
-//    }
+//    } while(gtMat3(rsnew, rsold * (epsilon * epsilon)));
+
+    while(rsold > epsilon)
+    {
+        Ap = jMatrixMultOp(true, p);
+        alpha = rsold / vecVecDotOp(p, Ap);
+        for(size_t i = 0; i < m_mspts.size(); ++i)
+        {
+            x[i] += alpha * p[i];
+            r[i] = r[i] - (alpha * Ap[i]);
+        }
+        rsnew = vecVecDotOp(r, r);
+        for(size_t i = 0; i < m_mspts.size(); ++i)
+        {
+            p[i] = r[i] + ((rsnew/rsold) * p[i]);
+        }
+        ++k;
+        rsold = rsnew;
+    }
     return x;
 }
 
@@ -319,12 +356,18 @@ std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, std::vector<ngl::Ve
     return nvec;
 }
 
-ngl::Mat3 Cloth::vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b)
+float Cloth::vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b)
 {
-    ngl::Mat3 result = ngl::Mat3(0.0f);
+//    ngl::Mat3 result = ngl::Mat3(0.0f);
+//    for(size_t i = 0; i < _a.size(); ++i)
+//    {
+//        result += vecVecTranspose(_a[i], _b[i]);
+//    }
+//    return result;
+    float result = 0.0f;
     for(size_t i = 0; i < _a.size(); ++i)
     {
-        result += vecVecTranspose(_a[i], _b[i]);
+        result += _a[i].dot(_b[i]);
     }
     return result;
 }
@@ -420,4 +463,21 @@ bool Cloth::gtMat3(ngl::Mat3 _a, ngl::Mat3 _b)
     b7 = _a.m_21 > _b.m_21;
     b8 = _a.m_22 > _b.m_22;
     return b0 && b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8;
+}
+
+ngl::Vec3 Cloth::cleanNearZero(ngl::Vec3 io_a)
+{
+    if(FCompare(io_a.m_x, 0.0f))
+    {
+        io_a.m_x = 0.0f;
+    }
+    if(FCompare(io_a.m_y, 0.0f))
+    {
+        io_a.m_y = 0.0f;
+    }
+    if(FCompare(io_a.m_z, 0.0f))
+    {
+        io_a.m_z = 0.0f;
+    }
+    return io_a;
 }

@@ -46,6 +46,7 @@ void MassPoint::addJacobian(const size_t _id, const ngl::Mat3 _jacobian)
     }
     // add the jacobian contribution
     m_jacobians[_id] += _jacobian;
+    //m_jacobians[_id] *= _jacobian; // try multiplying instead of adding
 }
 
 void MassPoint::multJacobians(const float _hsq)

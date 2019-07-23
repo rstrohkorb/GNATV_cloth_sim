@@ -2,9 +2,11 @@
 #define CLOTH_H_
 
 #include <vector>
+#include <boost/math/interpolators/cubic_b_spline.hpp>
 #include "MassPoint.h"
 #include "Triangle.h"
-#include "AbstractClothMaterial.h"
+
+enum material_type { WOOL };
 
 class Cloth
 {
@@ -20,7 +22,7 @@ public:
     Cloth() = delete;
 
     // User Constructor
-    Cloth(AbstractClothMaterial _material) : m_material(_material) {;}
+    Cloth(material_type _mt);
 
     // Initializers
     void init(std::string _filename, initOrientation _o);               // inits to obj file
@@ -28,8 +30,9 @@ public:
     // Getters/Setters
     size_t numMasses() const { return m_mspts.size(); }
     size_t numTriangles() const { return m_triangles.size(); }
-    float mass() const { return m_material.mass(); }
+    float mass() const { return m_mass; }
     float firstMass() const { return m_mspts[0].mass(); }
+    material_type material() const { return m_material; }
 
     // Render
     void render(std::vector<ngl::Vec3> &o_vertexData);
@@ -49,7 +52,11 @@ private:
     // Member Variables
     std::vector<MassPoint> m_mspts;
     std::vector<Triref> m_triangles;
-    AbstractClothMaterial m_material;
+    material_type m_material;
+    float m_mass = 0.0f;
+    boost::math::cubic_b_spline<float> m_weft;
+    boost::math::cubic_b_spline<float> m_warp;
+    boost::math::cubic_b_spline<float> m_shear;
 
     // Helper Functions
     void readObj(std::string _filename);
@@ -57,9 +64,10 @@ private:
     std::vector<ngl::Vec3> conjugateGradient(float _h);
     ngl::Mat3 vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b);
     std::vector<ngl::Vec3> jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec);
-    ngl::Mat3 vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b);
+    float vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b);
     ngl::Mat3 divMat3(ngl::Mat3 _a, ngl::Mat3 _b);
     bool gtMat3(ngl::Mat3 _a, ngl::Mat3 _b);
+    ngl::Vec3 cleanNearZero(ngl::Vec3 io_a);
 };
 
 #endif

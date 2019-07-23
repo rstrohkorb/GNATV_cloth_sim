@@ -8,15 +8,13 @@
 #include <ngl/VAOFactory.h>
 #include <ngl/Transformation.h>
 #include <iostream>
-#include "WoolMaterial.h"
 
 NGLScene::NGLScene()
 {
   // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
   setTitle("GNATV Cloth Sim");
   // initialize cloth
-  WoolMaterial wm;
-  m_cloth = Cloth(wm);
+  m_cloth = Cloth(WOOL);
   m_cloth.init("obj/clothObject.obj", XY);
 }
 
@@ -123,6 +121,7 @@ void NGLScene::keyPressEvent(QKeyEvent *_event)
   case Qt::Key_P :
       startTimer(7);
       break;
+  case Qt::Key_U : m_cloth.update(0.5f, ngl::Vec3(0.0f)); break;
   default : break;
   }
   // finally update the GLWindow and re-draw
