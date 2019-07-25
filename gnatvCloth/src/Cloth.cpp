@@ -89,8 +89,8 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
 //    std::cout<<"forces 434z: "<<m_mspts[434].forces().m_z << '\n';
     // STEP 2 - ADD EXTERNAL FORCES
     ngl::Vec3 fgravity, airRes;
-    fgravity = ngl::Vec3(0.0f, 9.8f, 0.0f);
-    fgravity.normalize();
+    fgravity = ngl::Vec3(0.0f, -9.8f, 0.0f);
+    //fgravity.normalize();
     //_externalf.normalize();
     for(auto &m : m_mspts)
     {
@@ -182,23 +182,23 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     strain.m_x = 0.5f * (U.dot(U) - 1);
     strain.m_y = 0.5f * (V.dot(V) - 1);
     strain.m_z = U.dot(V);
-    // Enforce strain uu and vv >= 0, and handle near-zero values
+    // handle near-zero values
     strain = cleanNearZero(strain);
-    if(strain.m_x < 0.0f)
-    {
-        strain.m_x = 0.0f;
-    }
-    if(strain.m_y < 0.0f)
-    {
-        strain.m_y = 0.0f;
-    }
     // 1.3 - ACQUIRE STRESS VALUES
     ngl::Vec3 stress;
     stress.m_x = m_weft(strain.m_x);
     stress.m_y = m_warp(strain.m_y);
     stress.m_z = m_shear(strain.m_z);
-    // handle near-zero values
+    // enforce stress uu and vv > 0, and handle near-zero values
     stress = cleanNearZero(stress);
+    if(stress.m_x < 0.0f)
+    {
+        stress.m_x = 0.0f;
+    }
+    if(stress.m_y < 0.0f)
+    {
+        stress.m_y = 0.0f;
+    }
     // 1.4 - COMPUTE FORCE CONTRIBUTIONS
     ngl::Vec3 fa, fb, fc;
     auto nd = -1 * tr.tri.surface_area();
