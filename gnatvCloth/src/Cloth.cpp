@@ -80,18 +80,9 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
     {
         forceCalcPerTriangle(tr);
     }
-    // testing - output current forces
-//    std::cout<<"forces 0x: "<<m_mspts[0].forces().m_x << '\n';
-//    std::cout<<"forces 0y: "<<m_mspts[0].forces().m_y << '\n';
-//    std::cout<<"forces 0z: "<<m_mspts[0].forces().m_z << '\n';
-//    std::cout<<"forces 434x: "<<m_mspts[434].forces().m_x << '\n';
-//    std::cout<<"forces 434y: "<<m_mspts[434].forces().m_y << '\n';
-//    std::cout<<"forces 434z: "<<m_mspts[434].forces().m_z << '\n';
     // STEP 2 - ADD EXTERNAL FORCES
     ngl::Vec3 fgravity, airRes;
     fgravity = ngl::Vec3(0.0f, -9.8f, 0.0f);
-    //fgravity.normalize();
-    //_externalf.normalize();
     for(auto &m : m_mspts)
     {
         airRes = m.vel();
@@ -102,9 +93,6 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
         }
         m.addForce((fgravity * m.mass()) + airRes + _externalf);
     }
-//    std::cout<<"post forces 0x: "<<m_mspts[0].forces().m_x << '\n';
-//    std::cout<<"post forces 0y: "<<m_mspts[0].forces().m_y << '\n';
-//    std::cout<<"post forces 0z: "<<m_mspts[0].forces().m_z << '\n';
     // STEP 3 - LET'S INTEGRATE
     auto deltaVel = conjugateGradient(_h);
     // STEP 4 - UPDATE PARTICLE VELOCITIES AND POSITIONS
@@ -214,7 +202,7 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     m_mspts[tr.b].addForce(fb);
     m_mspts[tr.c].addForce(fc);
     // 1.6 - COMPUTE JACOBIAN CONTRIBUTIONS
-    ngl::Mat3 Jaa, Jab, Jac, Jbb, Jbc, Jcc, UUt, VVt, UVt, VUt;
+    ngl::Mat3 Jaa, Jab, Jac, Jba, Jbb, Jbc, Jca, Jcb, Jcc, UUt, VVt, UVt, VUt;
     ngl::Vec3 stressPrime;
     stressPrime.m_x = m_weft.prime(strain.m_x);
     stressPrime.m_y = m_warp.prime(strain.m_y);
@@ -232,21 +220,25 @@ void Cloth::forceCalcPerTriangle(Triref tr)
         t4 = ngl::Mat3((stress.m_x * ruj * rui) + (stress.m_y * rvj * rvi) + (stress.m_z * ((ruj * rvi) + (rvj * rui))));
         return (t1 + t2 + t3 + t4) * nd;
     };
+    // Jji
     Jaa = jacobianCont(ru.m_x, ru.m_x, rv.m_x, rv.m_x);
-    Jab = jacobianCont(ru.m_x, ru.m_y, rv.m_x, rv.m_y);
-    Jac = jacobianCont(ru.m_x, ru.m_z, rv.m_x, rv.m_z);
+    Jab = jacobianCont(ru.m_y, ru.m_x, rv.m_y, rv.m_x);
+    Jac = jacobianCont(ru.m_z, ru.m_x, rv.m_z, rv.m_x);
+    Jba = jacobianCont(ru.m_x, ru.m_y, rv.m_x, rv.m_y);
     Jbb = jacobianCont(ru.m_y, ru.m_y, rv.m_y, rv.m_y);
-    Jbc = jacobianCont(ru.m_y, ru.m_z, rv.m_y, rv.m_z);
+    Jbc = jacobianCont(ru.m_z, ru.m_y, rv.m_z, rv.m_y);
+    Jca = jacobianCont(ru.m_x, ru.m_z, rv.m_x, rv.m_z);
+    Jcb = jacobianCont(ru.m_y, ru.m_z, rv.m_y, rv.m_z);
     Jcc = jacobianCont(ru.m_z, ru.m_z, rv.m_z, rv.m_z);
     // 1.7 - ADD JACOBIAN CONTRIBUTIONS TO TRIANGLE POINTS
     m_mspts[tr.a].addJacobian(tr.a, Jaa);
     m_mspts[tr.a].addJacobian(tr.b, Jab);
     m_mspts[tr.a].addJacobian(tr.c, Jac);
-    m_mspts[tr.b].addJacobian(tr.a, Jab);
+    m_mspts[tr.b].addJacobian(tr.a, Jba);
     m_mspts[tr.b].addJacobian(tr.b, Jbb);
     m_mspts[tr.b].addJacobian(tr.c, Jbc);
-    m_mspts[tr.c].addJacobian(tr.a, Jac);
-    m_mspts[tr.c].addJacobian(tr.b, Jbc);
+    m_mspts[tr.c].addJacobian(tr.a, Jca);
+    m_mspts[tr.c].addJacobian(tr.b, Jcb);
     m_mspts[tr.c].addJacobian(tr.c, Jcc);
 }
 
@@ -302,9 +294,11 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
 //        rsold = rsnew;
 //    } while(gtMat3(rsnew, rsold * (epsilon * epsilon)));
 
-    while(rsold > epsilon)
+    //while(rsold > epsilon)
+    while( k == 0)
     {
         Ap = jMatrixMultOp(true, p);
+        auto testval = vecVecDotOp(p, Ap);
         alpha = rsold / vecVecDotOp(p, Ap);
         for(size_t i = 0; i < m_mspts.size(); ++i)
         {
@@ -339,6 +333,8 @@ ngl::Mat3 Cloth::vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b)
 
 std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec)
 {
+    size_t numtrue = 0;
+    size_t numfalse = 0;
     std::vector<ngl::Vec3> nvec;
     nvec.resize(_vec.size());
     for(size_t i = 0; i < m_mspts.size(); ++i)
@@ -349,10 +345,25 @@ std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, std::vector<ngl::Ve
         for(auto k : keys)
         {
             vecPass[k] = _vec[k];
+            // test for global symmetry with the j-matrices
+            if(!_isA)
+            {
+                if(m_mspts[i].fetchJacobian(k) == m_mspts[k].fetchJacobian(i))
+                {
+                    ++numtrue;
+                }
+                else
+                {
+                    ++numfalse;
+                    std::cout<<"Discontinuity between "<<i<<" and "<<k<<'\n';
+                }
+            }
         }
         // pass them into the masspoint for the vector multiplication
         nvec[i] = m_mspts[i].jacobianVectorMult(_isA, vecPass);
     }
+    std::cout<<"Total number of equal J-matrices: "<<numtrue<<'\n';
+    std::cout<<"Total number of non-equal J-matrices: "<<numfalse<<'\n';
     return nvec;
 }
 

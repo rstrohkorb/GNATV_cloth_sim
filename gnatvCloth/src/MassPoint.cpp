@@ -1,3 +1,4 @@
+#include <iostream>
 #include "MassPoint.h"
 
 std::vector<size_t> MassPoint::jacobainKeys() const
@@ -44,8 +45,11 @@ void MassPoint::addJacobian(const size_t _id, const ngl::Mat3 _jacobian)
     {
         m_jacobians[_id] = ngl::Mat3(0.0f);
     }
+
     // add the jacobian contribution
     m_jacobians[_id] += _jacobian;
+
+
     //m_jacobians[_id] *= _jacobian; // try multiplying instead of adding
 }
 
