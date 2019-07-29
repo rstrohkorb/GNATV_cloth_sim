@@ -20,7 +20,8 @@ Cloth::Cloth(material_type _mt)
         m_warp = boost::math::cubic_b_spline<float>(wool_warpData.begin(), wool_warpData.end(),
                                                     wool_warpStart, wool_warpStep, 0.0f);
         m_shear = boost::math::cubic_b_spline<float>(wool_shearData.begin(), wool_shearData.end(),
-                                                     wool_shearStart, wool_shearStep, wool_shearSlope, wool_shearSlope);
+                                                     0.0f, wool_shearStep);
+        m_shearOffset = wool_shearStart;
     }
     break;
     }
@@ -170,13 +171,25 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     strain.m_x = 0.5f * (U.dot(U) - 1);
     strain.m_y = 0.5f * (V.dot(V) - 1);
     strain.m_z = U.dot(V);
-    // handle near-zero values
+    // enforce strain uu and vv > 0, uv > offset, and handle near-zero values
     strain = cleanNearZero(strain);
+    if(strain.m_x < 0.0f)
+    {
+        strain.m_x = 0.0f;
+    }
+    if(strain.m_y < 0.0f)
+    {
+        strain.m_y = 0.0f;
+    }
+    if(strain.m_z < m_shearOffset)
+    {
+        strain.m_z = m_shearOffset;
+    }
     // 1.3 - ACQUIRE STRESS VALUES
     ngl::Vec3 stress;
     stress.m_x = m_weft(strain.m_x);
     stress.m_y = m_warp(strain.m_y);
-    stress.m_z = m_shear(strain.m_z);
+    stress.m_z = m_shear(strain.m_z - m_shearOffset);
     // enforce stress uu and vv > 0, and handle near-zero values
     stress = cleanNearZero(stress);
     if(stress.m_x < 0.0f)
@@ -206,7 +219,7 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     ngl::Vec3 stressPrime;
     stressPrime.m_x = m_weft.prime(strain.m_x);
     stressPrime.m_y = m_warp.prime(strain.m_y);
-    stressPrime.m_z = m_shear.prime(strain.m_z);
+    stressPrime.m_z = m_shear.prime(strain.m_z - m_shearOffset);
     UUt = vecVecTranspose(U, U);
     VVt = vecVecTranspose(V, V);
     UVt = vecVecTranspose(U, V);
@@ -250,8 +263,9 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
         m.multJacobians(_h * _h);
     }
     // 3.2 - SET INITIAL VALUES
-    std::vector<ngl::Vec3> r, p, vel, hforce, x, Ap;
+    std::vector<ngl::Vec3> r, p, vel, hforce, x, Ap, b;
     r.resize(m_mspts.size());
+    b.resize(m_mspts.size());
     vel.reserve(m_mspts.size());
     hforce.reserve(m_mspts.size());
     x.resize(m_mspts.size());
@@ -266,8 +280,9 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
     auto jvt = jMatrixMultOp(false, vel);
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
-        r[i] = hforce[i] + jvt[i];
+        b[i] = hforce[i] + jvt[i];
     }
+    r = b;
     // other loop variables
     p = r;
     //ngl::Mat3 alpha, rsold, rsnew;
@@ -276,22 +291,6 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
     float epsilon = 1e-5f;
     size_t k = 0;
     // 3.3 - CONJUGATE GRADIENT METHOD LOOP
-//    do
-//    {
-//        Ap = jMatrixMultOp(true, p);
-//        alpha = divMat3(rsold, vecVecDotOp(p, Ap));
-//        for(size_t i = 0; i < m_mspts.size(); ++i)
-//        {
-//            x[i] += alpha * p[i];
-//            r[i] = r[i] - (alpha * Ap[i]);
-//        }
-//        rsnew = vecVecDotOp(r, r);
-//        for(size_t i = 0; i < m_mspts.size(); ++i)
-//        {
-//            p[i] = r[i] + (divMat3(rsnew, rsold) * p[i]);
-//        }
-//        ++k;
-//        rsold = rsnew;
 //    } while(gtMat3(rsnew, rsold * (epsilon * epsilon)));
 
     //while(rsold > epsilon)
@@ -333,8 +332,6 @@ ngl::Mat3 Cloth::vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b)
 
 std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec)
 {
-    size_t numtrue = 0;
-    size_t numfalse = 0;
     std::vector<ngl::Vec3> nvec;
     nvec.resize(_vec.size());
     for(size_t i = 0; i < m_mspts.size(); ++i)
@@ -345,135 +342,21 @@ std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, std::vector<ngl::Ve
         for(auto k : keys)
         {
             vecPass[k] = _vec[k];
-            // test for global symmetry with the j-matrices
-            if(!_isA)
-            {
-                if(m_mspts[i].fetchJacobian(k) == m_mspts[k].fetchJacobian(i))
-                {
-                    ++numtrue;
-                }
-                else
-                {
-                    ++numfalse;
-                    std::cout<<"Discontinuity between "<<i<<" and "<<k<<'\n';
-                }
-            }
         }
         // pass them into the masspoint for the vector multiplication
         nvec[i] = m_mspts[i].jacobianVectorMult(_isA, vecPass);
     }
-    std::cout<<"Total number of equal J-matrices: "<<numtrue<<'\n';
-    std::cout<<"Total number of non-equal J-matrices: "<<numfalse<<'\n';
     return nvec;
 }
 
 float Cloth::vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b)
 {
-//    ngl::Mat3 result = ngl::Mat3(0.0f);
-//    for(size_t i = 0; i < _a.size(); ++i)
-//    {
-//        result += vecVecTranspose(_a[i], _b[i]);
-//    }
-//    return result;
     float result = 0.0f;
     for(size_t i = 0; i < _a.size(); ++i)
     {
         result += _a[i].dot(_b[i]);
     }
     return result;
-}
-
-ngl::Mat3 Cloth::divMat3(ngl::Mat3 _a, ngl::Mat3 _b)
-{
-    ngl::Mat3 res;
-    if(FCompare(_b.m_00, 0.0f))
-    {
-        res.m_00 = 0.0f;
-    }
-    else
-    {
-        res.m_00 = _a.m_00 / _b.m_00;
-    }
-    if(FCompare(_b.m_01, 0.0f))
-    {
-        res.m_01 = 0.0f;
-    }
-    else
-    {
-        res.m_01 = _a.m_01 / _b.m_01;
-    }
-    if(FCompare(_b.m_02, 0.0f))
-    {
-        res.m_02 = 0.0f;
-    }
-    else
-    {
-        res.m_02 = _a.m_02 / _b.m_02;
-    }
-    if(FCompare(_b.m_10, 0.0f))
-    {
-        res.m_10 = 0.0f;
-    }
-    else
-    {
-        res.m_10 = _a.m_10 / _b.m_10;
-    }
-    if(FCompare(_b.m_11, 0.0f))
-    {
-        res.m_11 = 0.0f;
-    }
-    else
-    {
-        res.m_11 = _a.m_11 / _b.m_11;
-    }
-    if(FCompare(_b.m_12, 0.0f))
-    {
-        res.m_12 = 0.0f;
-    }
-    else
-    {
-        res.m_12 = _a.m_12 / _b.m_12;
-    }
-    if(FCompare(_b.m_20, 0.0f))
-    {
-        res.m_20 = 0.0f;
-    }
-    else
-    {
-        res.m_20 = _a.m_20 / _b.m_20;
-    }
-    if(FCompare(_b.m_21, 0.0f))
-    {
-        res.m_21 = 0.0f;
-    }
-    else
-    {
-        res.m_21 = _a.m_21 / _b.m_21;
-    }
-    if(FCompare(_b.m_22, 0.0f))
-    {
-        res.m_22 = 0.0f;
-    }
-    else
-    {
-        res.m_22 = _a.m_22 / _b.m_22;
-    }
-    return res;
-}
-
-bool Cloth::gtMat3(ngl::Mat3 _a, ngl::Mat3 _b)
-{
-    bool b0, b1, b2, b3, b4, b5, b6, b7, b8;
-    b0 = _a.m_00 > _b.m_00;
-    b1 = _a.m_01 > _b.m_01;
-    b2 = _a.m_02 > _b.m_02;
-    b3 = _a.m_10 > _b.m_10;
-    b4 = _a.m_11 > _b.m_11;
-    b5 = _a.m_12 > _b.m_12;
-    b6 = _a.m_20 > _b.m_20;
-    b7 = _a.m_21 > _b.m_21;
-    b8 = _a.m_22 > _b.m_22;
-    return b0 && b1 && b2 && b3 && b4 && b5 && b6 && b7 && b8;
 }
 
 ngl::Vec3 Cloth::cleanNearZero(ngl::Vec3 io_a)

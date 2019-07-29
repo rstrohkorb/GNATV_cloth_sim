@@ -13,8 +13,6 @@ static float wool_weftStep = 0.004078f;
 static float wool_warpStep = 0.00048614f;
 static float wool_shearStep = 0.01f;
 
-static float wool_shearSlope = 899.9f;
-
 static std::vector<float> wool_weftData = {
     0.0f, 1.494023904f, 3.472222222f, 9.881422925f, 14.76377953f,
     24.50980392f, 29.296875f, 38.91050584f, 48.4496124f, 57.91505792f,

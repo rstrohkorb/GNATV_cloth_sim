@@ -57,6 +57,7 @@ private:
     boost::math::cubic_b_spline<float> m_weft;
     boost::math::cubic_b_spline<float> m_warp;
     boost::math::cubic_b_spline<float> m_shear;
+    float m_shearOffset = 0.0f;
 
     // Helper Functions
     void readObj(std::string _filename);
@@ -65,8 +66,6 @@ private:
     ngl::Mat3 vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b);
     std::vector<ngl::Vec3> jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec);
     float vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b);
-    ngl::Mat3 divMat3(ngl::Mat3 _a, ngl::Mat3 _b);
-    bool gtMat3(ngl::Mat3 _a, ngl::Mat3 _b);
     ngl::Vec3 cleanNearZero(ngl::Vec3 io_a);
 };
 
