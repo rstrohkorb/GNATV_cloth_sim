@@ -26,7 +26,7 @@ NGLScene::~NGLScene()
 
 void NGLScene::timerEvent(QTimerEvent *_event)
 {
-    m_cloth.update(0.5f, ngl::Vec3(0.0f));
+    m_cloth.update(0.001f, ngl::Vec3(0.0f));
     update();
 }
 

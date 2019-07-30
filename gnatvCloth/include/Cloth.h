@@ -63,6 +63,7 @@ private:
     void readObj(std::string _filename);
     void forceCalcPerTriangle(Triref tr);
     std::vector<ngl::Vec3> conjugateGradient(float _h);
+    void rk4Integrate(float _h);
     ngl::Mat3 vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b);
     std::vector<ngl::Vec3> jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec);
     float vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b);

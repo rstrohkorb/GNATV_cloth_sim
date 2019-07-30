@@ -95,16 +95,17 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
         m.addForce((fgravity * m.mass()) + airRes + _externalf);
     }
     // STEP 3 - LET'S INTEGRATE
-    auto deltaVel = conjugateGradient(_h);
-    // STEP 4 - UPDATE PARTICLE VELOCITIES AND POSITIONS
-    for(size_t i = 0; i < m_mspts.size(); ++i)
-    {
-        auto newVel = m_mspts[i].vel() + deltaVel[i];
-        auto newPos = m_mspts[i].pos() + (_h * newVel);
-        m_mspts[i].setVel(newVel);
-        m_mspts[i].setPos(newPos);
-    }
-    // STEP 5 - CLEANUP AND STATE HANDLING
+//    auto deltaVel = conjugateGradient(_h);
+//    // Update particle velocities and positions
+//    for(size_t i = 0; i < m_mspts.size(); ++i)
+//    {
+//        auto newVel = m_mspts[i].vel() + deltaVel[i];
+//        auto newPos = m_mspts[i].pos() + (_h * newVel);
+//        m_mspts[i].setVel(newVel);
+//        m_mspts[i].setPos(newPos);
+//    }
+    rk4Integrate(_h);
+    // STEP 4 - CLEANUP AND STATE HANDLING
     for(auto& tr : m_triangles)
     {
         tr.tri.setVertices(m_mspts[tr.a].pos(), m_mspts[tr.b].pos(), m_mspts[tr.c].pos());
@@ -162,10 +163,11 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     ngl::Vec3 ru, rv, U, V;
     ru = tr.tri.ru();
     rv = tr.tri.rv();
-    U = (ru.m_x * tr.tri.v1()) + (ru.m_y * tr.tri.v2()) + (ru.m_z * tr.tri.v3());
-    V = (rv.m_x * tr.tri.v1()) + (rv.m_y * tr.tri.v2()) + (rv.m_z * tr.tri.v3());
-    //U.normalize();
-    //V.normalize();
+    U = (ru.m_x * m_mspts[tr.a].pos()) + (ru.m_y * m_mspts[tr.b].pos()) + (ru.m_z * m_mspts[tr.c].pos());
+    V = (rv.m_x * m_mspts[tr.a].pos()) + (rv.m_y * m_mspts[tr.b].pos()) + (rv.m_z * m_mspts[tr.c].pos());
+    // handle near-zero values
+    U = cleanNearZero(U);
+    V = cleanNearZero(V);
     // 1.2 - ACQUIRE STRAIN VALUES
     ngl::Vec3 strain;
     strain.m_x = 0.5f * (U.dot(U) - 1);
@@ -285,7 +287,6 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
     r = b;
     // other loop variables
     p = r;
-    //ngl::Mat3 alpha, rsold, rsnew;
     float alpha, rsold, rsnew;
     rsold = vecVecDotOp(r, r);
     float epsilon = 1e-5f;
@@ -313,6 +314,77 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
         rsold = rsnew;
     }
     return x;
+}
+
+void Cloth::rk4Integrate(float _h)
+{
+    std::vector<ngl::Vec3> initpos, initvel, k1pos, k1vel, k2pos, k2vel, k3pos, k3vel, k4pos, k4vel;
+    // 3.1 - DETERMINE INIT/K1 VALUES
+    for(auto m : m_mspts)
+    {
+        initpos.push_back(m.pos());
+        initvel.push_back(m.vel());
+        k1pos.push_back(m.vel());
+        k1vel.push_back(m.forces());
+    }
+    // 3.1.5 - UPDATE CLOTH STATE TO MATCH K1, RECALC FORCES
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        m_mspts[i].setPos(initpos[i] + (k1pos[i] * _h * 0.5f));
+        m_mspts[i].setVel(initvel[i] + (k1vel[i] * _h * 0.5f));
+    }
+    for(auto tr : m_triangles)
+    {
+        forceCalcPerTriangle(tr);
+    }
+    // 3.2 - DETERMINE K2 VALUES
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        k2pos.push_back(initvel[i] + (k1vel[i] * _h * 0.5f));
+        k2vel.push_back(m_mspts[i].forces());
+    }
+    // 3.2.4 - UPDATE CLOTH STATE TO MATCH K2, RECALC FORCES
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        m_mspts[i].setPos(initpos[i] + (k2pos[i] * _h * 0.5f));
+        m_mspts[i].setVel(initvel[i] + (k2vel[i] * _h * 0.5f));
+    }
+    for(auto tr : m_triangles)
+    {
+        forceCalcPerTriangle(tr);
+    }
+    // 3.3 - DETERMINE K3 VALUES
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        k3pos.push_back(initvel[i] + (k2vel[i] * _h * 0.5f));
+        k3vel.push_back(m_mspts[i].forces());
+    }
+    // 3.3.5 - UPDATE CLOTH STATE TO MATCH K3, RECALC FORCES
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        m_mspts[i].setPos(initpos[i] + (k3pos[i] * _h));
+        m_mspts[i].setVel(initvel[i] + (k3vel[i] * _h));
+    }
+    for(auto tr : m_triangles)
+    {
+        forceCalcPerTriangle(tr);
+    }
+    // 3.4 - DETERMINE K4 VALUES
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        k3pos.push_back(initvel[i] + (k3vel[i] * _h));
+        k3vel.push_back(m_mspts[i].forces());
+    }
+    // 3.5 - COMBINE K TERMS TO FORM DELTA VEL AND DELTA POS, UPDATE VEL AND POS
+    ngl::Vec3 deltavel, deltapos;
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        deltavel = (1.0f/6.0f) * (k1vel[i] + (2 * (k2vel[i] + k3vel[i])) + k4vel[i]);
+        deltapos = (1.0f/6.0f) * (k1pos[i] + (2 * (k2pos[i] + k3pos[i])) + k4pos[i]);
+
+        m_mspts[i].setPos(m.pos() + (deltapos * _h));
+        m_mspts[i].setVel(m.vel() + (deltavel * _h));
+    }
 }
 
 ngl::Mat3 Cloth::vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b)
