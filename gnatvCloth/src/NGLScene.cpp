@@ -14,10 +14,11 @@ NGLScene::NGLScene()
   // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
   setTitle("GNATV Cloth Sim");
   // initialize cloth
-  std::vector<size_t> corners = {0, 29, 870, 899};
+  //std::vector<size_t> corners = {0, 29, 870, 899};
+  std::vector<size_t> corners = {0, 9, 90, 99};
   m_cloth = Cloth(WOOL);
-  m_cloth.init("obj/clothObject.obj", XY, corners);
-  std::vector<bool> fixedCorners = {false, false, true, true};
+  m_cloth.init("obj/cloth.obj", XZ, corners);
+  std::vector<bool> fixedCorners = {1, 1, 1, 1};
   m_cloth.fixCorners(fixedCorners);
 }
 
