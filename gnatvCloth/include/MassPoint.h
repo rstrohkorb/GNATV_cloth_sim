@@ -30,10 +30,11 @@ public:
     ngl::Mat3 fetchJacobian(size_t _id) { return m_jacobians[_id]; } // not safe, for testing only
 
     void setPos(const ngl::Vec3 _pos) { m_pos = _pos; }
-    void setVel(const ngl::Vec3 _vel) { m_vel = _vel; }
+    void setVel(const ngl::Vec3 _vel);
     void setMass(const float _mass) { m_mass = _mass; }
+    void setFixed(const bool _isFixed);
     void resetForce() { m_forces = ngl::Vec3(0.0f); }
-    void addForce(const ngl::Vec3 _force) { m_forces += _force; }
+    void addForce(const ngl::Vec3 _force);
 
     // Jacobian operators
     bool nullJacobians();                                           // returns true if all the jacobians are zero or empty map

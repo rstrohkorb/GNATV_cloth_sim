@@ -1,6 +1,7 @@
 #ifndef NGLSCENE_H_
 #define NGLSCENE_H_
 #include <ngl/Vec3.h>
+#include <ngl/Vec4.h>
 #include <ngl/Mat4.h>
 #include <ngl/AbstractVAO.h>
 #include "WindowParams.h"
@@ -92,11 +93,12 @@ private:
     ngl::Mat4 m_view;
     /// project matrix
     ngl::Mat4 m_project;
+    ngl::Vec4 m_lightPos;
     /// VAO for the cloth triangles
     std::unique_ptr<ngl::AbstractVAO> m_clothVAO;
     /// load matrix to shader
-    void loadMatrixToShader(const ngl::Mat4 &_tx, const ngl::Vec4 &_color);
-
+    void loadMatrixToColorShader(const ngl::Mat4 &_tx, const ngl::Vec4 &_color);
+    void loadMatrixToPBRShader(const ngl::Mat4 &_tx);
 };
 
 

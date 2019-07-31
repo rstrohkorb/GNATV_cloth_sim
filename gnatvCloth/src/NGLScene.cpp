@@ -14,8 +14,11 @@ NGLScene::NGLScene()
   // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
   setTitle("GNATV Cloth Sim");
   // initialize cloth
+  std::vector<size_t> corners = {0, 29, 870, 899};
   m_cloth = Cloth(WOOL);
-  m_cloth.init("obj/clothObject.obj", XY);
+  m_cloth.init("obj/clothObject.obj", XY, corners);
+  std::vector<bool> fixedCorners = {false, false, true, true};
+  m_cloth.fixCorners(fixedCorners);
 }
 
 
@@ -26,7 +29,10 @@ NGLScene::~NGLScene()
 
 void NGLScene::timerEvent(QTimerEvent *_event)
 {
-    m_cloth.update(0.001f, ngl::Vec3(0.0f));
+    for(size_t i = 0; i < 10; ++i)
+    {
+        m_cloth.update(0.001f, ngl::Vec3(0.0f));
+    }
     update();
 }
 
@@ -51,19 +57,44 @@ void NGLScene::initializeGL()
   glEnable(GL_DEPTH_TEST);
   // enable multisampling for smoother drawing
   glEnable(GL_MULTISAMPLE);
+
   // load shaders
   ngl::ShaderLib *shader = ngl::ShaderLib::instance();
   shader->loadShader("ColorShader", "shaders/ColorVertex.glsl",
                    "shaders/ColorFragment.glsl");
-  //set the camera
-  m_view = ngl::lookAt({0.0f, 20.0f, 20.0f}, ngl::Vec3::zero(), ngl::Vec3::up());
+  shader->createShaderProgram("PBR");
+  shader->attachShader("PBRVertex", ngl::ShaderType::VERTEX);
+  shader->attachShader("PBRFragment", ngl::ShaderType::FRAGMENT);
+  shader->loadShaderSource("PBRVertex", "shaders/PBRVertex.glsl");
+  shader->loadShaderSource("PBRFragment", "shaders/PBRFragment.glsl");
+  shader->compileShader("PBRVertex");
+  shader->compileShader("PBRFragment");
+  shader->attachShaderToProgram("PBR", "PBRVertex");
+  shader->attachShaderToProgram("PBR", "PBRFragment");
+
+  // set up PBR shader to accept initial vals
+  shader->linkProgramObject("PBR");
+  ( *shader )["PBR"]->use();
+  // set the camera
+  ngl::Vec3 from = {0.0f, 20.0f, 20.0f};
+  m_view = ngl::lookAt(from, ngl::Vec3::zero(), ngl::Vec3::up());
+  // give camera to shader
+  shader->setUniform("camPos", from);
+  // add a light from the camera pos
+  m_lightPos.set(from.m_x, from.m_y, from.m_z, 1.0f);
+  // set uniform values in the PBR shader that can remain static
+  shader->setUniform("lightPosition",m_lightPos.toVec3());
+  shader->setUniform("lightColor",400.0f,400.0f,400.0f);
+  shader->setUniform("exposure",2.2f);
+  shader->setUniform("albedo",0.950f, 0.71f, 0.29f);
+
+  shader->setUniform("metallic",0.01f);
+  shader->setUniform("roughness",0.78f);
+  shader->setUniform("ao",0.2f);
 
   //make a simple vao for the cloth triangles
   m_clothVAO = ngl::VAOFactory::createVAO(ngl::simpleVAO, GL_TRIANGLES);
-
 }
-
-
 
 void NGLScene::paintGL()
 {
@@ -85,14 +116,37 @@ void NGLScene::paintGL()
   m_clothVAO->bind();
   m_clothVAO->setData(ngl::SimpleVAO::VertexData(tri.size()*sizeof(ngl::Vec3),
                                           tri[0].m_x));
-  m_clothVAO->setVertexAttributePointer(0, 3, GL_FLOAT, sizeof(ngl::Vec3), 0);
-  m_clothVAO->setNumIndices(tri.size());
-  loadMatrixToShader(mouseRotation, ngl::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+  m_clothVAO->setVertexAttributePointer(0, 3, GL_FLOAT, 2*sizeof(ngl::Vec3), 0);
+  m_clothVAO->setVertexAttributePointer(1, 3, GL_FLOAT, 2*sizeof(ngl::Vec3), 3);
+  m_clothVAO->setNumIndices(tri.size()/2);
+
+  loadMatrixToPBRShader(mouseRotation);
   m_clothVAO->draw();
   m_clothVAO->unbind();
 }
 
-void NGLScene::loadMatrixToShader(const ngl::Mat4 &_tx, const ngl::Vec4 &_color)
+void NGLScene::loadMatrixToPBRShader(const ngl::Mat4 &_tx)
+{
+    ngl::ShaderLib* shader = ngl::ShaderLib::instance();
+    shader->use("PBR");
+    // transform struct to match what's in shader
+    struct transform
+    {
+      ngl::Mat4 MVP;
+      ngl::Mat4 normalMatrix;
+      ngl::Mat4 M;
+    };
+    // set transform vals
+    transform t;
+    t.M=m_view*_tx;
+    t.MVP=m_project*t.M;
+    t.normalMatrix=t.M;
+    t.normalMatrix.inverse().transpose();
+    // set uniforms
+    shader->setUniformBuffer("TransformUBO",sizeof(transform),&t.MVP.m_00);
+}
+
+void NGLScene::loadMatrixToColorShader(const ngl::Mat4 &_tx, const ngl::Vec4 &_color)
 {
     ngl::ShaderLib *shader = ngl::ShaderLib::instance();
     shader->use("ColorShader");
@@ -119,7 +173,7 @@ void NGLScene::keyPressEvent(QKeyEvent *_event)
 
   break;
   case Qt::Key_P :
-      startTimer(7);
+      startTimer(5);
       break;
   case Qt::Key_U : m_cloth.update(0.5f, ngl::Vec3(0.0f)); break;
   default : break;

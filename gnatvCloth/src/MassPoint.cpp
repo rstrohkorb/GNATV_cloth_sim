@@ -1,6 +1,32 @@
 #include <iostream>
 #include "MassPoint.h"
 
+void MassPoint::setVel(const ngl::Vec3 _vel)
+{
+    if(!m_fixed)
+    {
+        m_vel = _vel;
+    }
+}
+
+void MassPoint::setFixed(const bool _isFixed)
+{
+    m_fixed = _isFixed;
+    if(_isFixed)
+    {
+        m_vel = ngl::Vec3(0.0f);
+        m_forces = ngl::Vec3(0.0f);
+    }
+}
+
+void MassPoint::addForce(const ngl::Vec3 _force)
+{
+    if(!m_fixed)
+    {
+        m_forces += _force;
+    }
+}
+
 std::vector<size_t> MassPoint::jacobainKeys() const
 {
     std::vector<size_t> keys;
@@ -48,9 +74,6 @@ void MassPoint::addJacobian(const size_t _id, const ngl::Mat3 _jacobian)
 
     // add the jacobian contribution
     m_jacobians[_id] += _jacobian;
-
-
-    //m_jacobians[_id] *= _jacobian; // try multiplying instead of adding
 }
 
 void MassPoint::multJacobians(const float _hsq)

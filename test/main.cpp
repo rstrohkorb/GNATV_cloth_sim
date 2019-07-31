@@ -43,6 +43,11 @@ TEST(MassPoint,setVariables)
     EXPECT_FLOAT_EQ(m.mass(), 4.0f);
     EXPECT_TRUE(m.pos() == ngl::Vec3(2.2f));
     EXPECT_TRUE(m.vel() == ngl::Vec3(3.0f));
+    m.setFixed(true);
+    EXPECT_TRUE(m.fixed());
+    EXPECT_TRUE(m.vel() == ngl::Vec3(0.0f));
+    m.setVel(ngl::Vec3(3.0f));
+    EXPECT_TRUE(m.vel() == ngl::Vec3(0.0f));
 }
 
 TEST(MassPoint,forceModifiers)
@@ -53,6 +58,11 @@ TEST(MassPoint,forceModifiers)
     m.addForce(ngl::Vec3(1.0f));
     EXPECT_TRUE(m.forces() == ngl::Vec3(2.0f));
     m.resetForce();
+    EXPECT_TRUE(m.forces() == ngl::Vec3(0.0f));
+    m.addForce(ngl::Vec3(3.0f));
+    m.setFixed(true);
+    EXPECT_TRUE(m.forces() == ngl::Vec3(0.0f));
+    m.addForce(ngl::Vec3(3.0f));
     EXPECT_TRUE(m.forces() == ngl::Vec3(0.0f));
 }
 
@@ -141,9 +151,32 @@ TEST(Cloth,userctor)
 
 TEST(Cloth,init)
 {
+    std::vector<size_t> corners = {0, 29, 870, 899};
     Cloth c(WOOL);
-    c.init("../gnatvCloth/obj/clothObject.obj", XY);
+    c.init("../gnatvCloth/obj/clothObject.obj", XY, corners);
     EXPECT_TRUE(c.numMasses() == 900);
     EXPECT_TRUE(c.numTriangles() == 1682);
     EXPECT_FLOAT_EQ(c.firstMass(), 0.0029726522);
+    EXPECT_TRUE(corners == c.corners());
+}
+
+TEST(Cloth,fixCorners)
+{
+    std::vector<size_t> corners = {0, 29, 870, 899};
+    Cloth c(WOOL);
+    c.init("../gnatvCloth/obj/clothObject.obj", XY, corners);
+    std::vector<bool> c1, c2, c3, c4;
+    c1 = {false, false, true, true};
+    c2 = {true, false, true, false};
+    c3 = {true, true, true, true};
+    c4 = {false, false, false, false};
+
+    c.fixCorners(c1);
+    EXPECT_TRUE(c.isCornerFixed() == c1);
+    c.fixCorners(c2);
+    EXPECT_TRUE(c.isCornerFixed() == c2);
+    c.fixCorners(c3);
+    EXPECT_TRUE(c.isCornerFixed() == c3);
+    c.fixCorners(c4);
+    EXPECT_TRUE(c.isCornerFixed() == c4);
 }

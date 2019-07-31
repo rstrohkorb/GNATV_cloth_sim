@@ -27,7 +27,7 @@ Cloth::Cloth(material_type _mt)
     }
 }
 
-void Cloth::init(std::string _filename, initOrientation _o)
+void Cloth::init(std::string _filename, initOrientation _o, std::vector<size_t> _corners)
 {
     // read in object data
     readObj(_filename);
@@ -54,47 +54,57 @@ void Cloth::init(std::string _filename, initOrientation _o)
         auto totalMass = std::accumulate(massCollect[i].begin(), massCollect[i].end(), 0.0f);
         m_mspts[i].setMass(totalMass/3);
     }
+    // assign corners
+    m_corners = _corners;
 }
 
 void Cloth::render(std::vector<ngl::Vec3> &o_vertexData)
 {
-    o_vertexData.reserve(m_triangles.size());
-    // spit out current triangle positions
-    for(auto t : m_triangles)
+    // determine vertex normals
+    std::vector<ngl::Vec3> vNorms;
+    vNorms.resize(m_mspts.size());
+    for(auto tr : m_triangles)
     {
-        o_vertexData.push_back(t.tri.v1());
-        o_vertexData.push_back(t.tri.v2());
-        o_vertexData.push_back(t.tri.v3());
+        ngl::Vec3 triNormal, edge1, edge2;
+        edge1 = tr.tri.v2() - tr.tri.v1();
+        edge2 = tr.tri.v3() - tr.tri.v1();
+        triNormal = edge1.cross(edge2);
+        if(triNormal != ngl::Vec3(0.0f))
+        {
+            triNormal.normalize();
+        }
+        vNorms[tr.a] += triNormal;
+        vNorms[tr.b] += triNormal;
+        vNorms[tr.c] += triNormal;
+    }
+    for(auto &vn : vNorms)
+    {
+        if(vn != ngl::Vec3(0.0f))
+        {
+            vn.normalize();
+        }
+    }
+    // spit out the triangle/vertex data
+    o_vertexData.reserve(m_triangles.size() * 2);
+    for(auto tr : m_triangles)
+    {
+        // interlaced - vertex position, vertex normal
+        o_vertexData.push_back(tr.tri.v1());
+        o_vertexData.push_back(vNorms[tr.a]);
+        o_vertexData.push_back(tr.tri.v2());
+        o_vertexData.push_back(vNorms[tr.b]);
+        o_vertexData.push_back(tr.tri.v3());
+        o_vertexData.push_back(vNorms[tr.c]);
     }
 }
 
 void Cloth::update(float _h, ngl::Vec3 _externalf)
 {
     // STEP 0 - ZERO OUT CURRENT FORCES/JACOBIANS ON EACH MASSPOINT
-    for(auto& m : m_mspts)
-    {
-        m.resetForce();
-        m.resetJacobians();
-    }
-    // STEP 1 - INTERNAL FORCE CALCULATIONS PER-TRIANGLE
-    for(auto tr : m_triangles)
-    {
-        forceCalcPerTriangle(tr);
-    }
-    // STEP 2 - ADD EXTERNAL FORCES
-    ngl::Vec3 fgravity, airRes;
-    fgravity = ngl::Vec3(0.0f, -9.8f, 0.0f);
-    for(auto &m : m_mspts)
-    {
-        airRes = m.vel();
-        if(airRes != ngl::Vec3(0.0f))
-        {
-            airRes.normalize();
-            airRes *= -1.0f * m.vel().lengthSquared();
-        }
-        m.addForce((fgravity * m.mass()) + airRes + _externalf);
-    }
-    // STEP 3 - LET'S INTEGRATE
+    nullForces();
+    // STEP 1 - FORCE CALCULATIONS
+    forceCalc(_h, _externalf, true);
+    // STEP 2 - LET'S INTEGRATE
 //    auto deltaVel = conjugateGradient(_h);
 //    // Update particle velocities and positions
 //    for(size_t i = 0; i < m_mspts.size(); ++i)
@@ -104,12 +114,30 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
 //        m_mspts[i].setVel(newVel);
 //        m_mspts[i].setPos(newPos);
 //    }
-    rk4Integrate(_h);
-    // STEP 4 - CLEANUP AND STATE HANDLING
+    rk4Integrate(_h, _externalf);
+    // STEP 3 - CLEANUP AND STATE HANDLING
     for(auto& tr : m_triangles)
     {
         tr.tri.setVertices(m_mspts[tr.a].pos(), m_mspts[tr.b].pos(), m_mspts[tr.c].pos());
     }
+}
+
+void Cloth::fixCorners(std::vector<bool> _isPtFixed)
+{
+    for(size_t i = 0; i < m_corners.size(); ++i)
+    {
+        m_mspts[m_corners[i]].setFixed(_isPtFixed[i]);
+    }
+}
+
+std::vector<bool> Cloth::isCornerFixed() const
+{
+    std::vector<bool> cornerFixed;
+    for(auto i : m_corners)
+    {
+        cornerFixed.push_back(m_mspts[i].fixed());
+    }
+    return cornerFixed;
 }
 
 void Cloth::readObj(std::string _filename)
@@ -157,14 +185,45 @@ void Cloth::readObj(std::string _filename)
     clothFile.close();
 }
 
-void Cloth::forceCalcPerTriangle(Triref tr)
+void Cloth::nullForces()
+{
+    for(auto& m : m_mspts)
+    {
+        m.resetForce();
+        m.resetJacobians();
+    }
+}
+
+void Cloth::forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians)
+{
+    // Internal force calculations per triangle
+    for(auto tr : m_triangles)
+    {
+        forceCalcPerTriangle(tr, _calcJacobians);
+    }
+    // External forces
+    ngl::Vec3 fgravity, airRes;
+    fgravity = ngl::Vec3(0.0f, -9.8f, 0.0f);
+    for(auto &m : m_mspts)
+    {
+        airRes = m.vel();
+        if(airRes != ngl::Vec3(0.0f))
+        {
+            airRes.normalize();
+            airRes *= -1.0f * m.vel().lengthSquared();
+        }
+        m.addForce((fgravity * m.mass()));// + airRes + _externalf);
+    }
+}
+
+void Cloth::forceCalcPerTriangle(Triref _tr, bool _calcJacobians)
 {
     // 1.1 - CALC U AND V
     ngl::Vec3 ru, rv, U, V;
-    ru = tr.tri.ru();
-    rv = tr.tri.rv();
-    U = (ru.m_x * m_mspts[tr.a].pos()) + (ru.m_y * m_mspts[tr.b].pos()) + (ru.m_z * m_mspts[tr.c].pos());
-    V = (rv.m_x * m_mspts[tr.a].pos()) + (rv.m_y * m_mspts[tr.b].pos()) + (rv.m_z * m_mspts[tr.c].pos());
+    ru = _tr.tri.ru();
+    rv = _tr.tri.rv();
+    U = (ru.m_x * m_mspts[_tr.a].pos()) + (ru.m_y * m_mspts[_tr.b].pos()) + (ru.m_z * m_mspts[_tr.c].pos());
+    V = (rv.m_x * m_mspts[_tr.a].pos()) + (rv.m_y * m_mspts[_tr.b].pos()) + (rv.m_z * m_mspts[_tr.c].pos());
     // handle near-zero values
     U = cleanNearZero(U);
     V = cleanNearZero(V);
@@ -204,7 +263,7 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     }
     // 1.4 - COMPUTE FORCE CONTRIBUTIONS
     ngl::Vec3 fa, fb, fc;
-    auto nd = -1 * tr.tri.surface_area();
+    auto nd = -1 * _tr.tri.surface_area();
     auto forceCont = [nd, stress, U, V] (float rui, float rvi) -> ngl::Vec3
     {
         return nd * ((stress.m_x * (rui * U)) + (stress.m_y * (rvi * V)) + (stress.m_z * ((rui * V) + (rvi * U))));
@@ -213,48 +272,51 @@ void Cloth::forceCalcPerTriangle(Triref tr)
     fb = forceCont(ru.m_y, rv.m_y);
     fc = forceCont(ru.m_z, rv.m_z);
     // 1.5 - APPLY FORCE CONTRIBUTIONS TO TRIANGLE POINTS
-    m_mspts[tr.a].addForce(fa);
-    m_mspts[tr.b].addForce(fb);
-    m_mspts[tr.c].addForce(fc);
+    m_mspts[_tr.a].addForce(fa);
+    m_mspts[_tr.b].addForce(fb);
+    m_mspts[_tr.c].addForce(fc);
     // 1.6 - COMPUTE JACOBIAN CONTRIBUTIONS
-    ngl::Mat3 Jaa, Jab, Jac, Jba, Jbb, Jbc, Jca, Jcb, Jcc, UUt, VVt, UVt, VUt;
-    ngl::Vec3 stressPrime;
-    stressPrime.m_x = m_weft.prime(strain.m_x);
-    stressPrime.m_y = m_warp.prime(strain.m_y);
-    stressPrime.m_z = m_shear.prime(strain.m_z - m_shearOffset);
-    UUt = vecVecTranspose(U, U);
-    VVt = vecVecTranspose(V, V);
-    UVt = vecVecTranspose(U, V);
-    VUt = vecVecTranspose(V, U);
-    auto jacobianCont = [nd, stressPrime, stress, UUt, VVt, UVt, VUt] (float rui, float ruj, float rvi, float rvj) -> ngl::Mat3
+    if(_calcJacobians)
     {
-        ngl::Mat3 t1, t2, t3, t4;
-        t1 = UUt * (stressPrime.m_x * ruj * rui);
-        t2 = VVt * (stressPrime.m_y * rvj * rvi);
-        t3 = ((UVt * (ruj * rvi)) + (VUt * (rvj * rui))) * stressPrime.m_z;
-        t4 = ngl::Mat3((stress.m_x * ruj * rui) + (stress.m_y * rvj * rvi) + (stress.m_z * ((ruj * rvi) + (rvj * rui))));
-        return (t1 + t2 + t3 + t4) * nd;
-    };
-    // Jji
-    Jaa = jacobianCont(ru.m_x, ru.m_x, rv.m_x, rv.m_x);
-    Jab = jacobianCont(ru.m_y, ru.m_x, rv.m_y, rv.m_x);
-    Jac = jacobianCont(ru.m_z, ru.m_x, rv.m_z, rv.m_x);
-    Jba = jacobianCont(ru.m_x, ru.m_y, rv.m_x, rv.m_y);
-    Jbb = jacobianCont(ru.m_y, ru.m_y, rv.m_y, rv.m_y);
-    Jbc = jacobianCont(ru.m_z, ru.m_y, rv.m_z, rv.m_y);
-    Jca = jacobianCont(ru.m_x, ru.m_z, rv.m_x, rv.m_z);
-    Jcb = jacobianCont(ru.m_y, ru.m_z, rv.m_y, rv.m_z);
-    Jcc = jacobianCont(ru.m_z, ru.m_z, rv.m_z, rv.m_z);
-    // 1.7 - ADD JACOBIAN CONTRIBUTIONS TO TRIANGLE POINTS
-    m_mspts[tr.a].addJacobian(tr.a, Jaa);
-    m_mspts[tr.a].addJacobian(tr.b, Jab);
-    m_mspts[tr.a].addJacobian(tr.c, Jac);
-    m_mspts[tr.b].addJacobian(tr.a, Jba);
-    m_mspts[tr.b].addJacobian(tr.b, Jbb);
-    m_mspts[tr.b].addJacobian(tr.c, Jbc);
-    m_mspts[tr.c].addJacobian(tr.a, Jca);
-    m_mspts[tr.c].addJacobian(tr.b, Jcb);
-    m_mspts[tr.c].addJacobian(tr.c, Jcc);
+        ngl::Mat3 Jaa, Jab, Jac, Jba, Jbb, Jbc, Jca, Jcb, Jcc, UUt, VVt, UVt, VUt;
+        ngl::Vec3 stressPrime;
+        stressPrime.m_x = m_weft.prime(strain.m_x);
+        stressPrime.m_y = m_warp.prime(strain.m_y);
+        stressPrime.m_z = m_shear.prime(strain.m_z - m_shearOffset);
+        UUt = vecVecTranspose(U, U);
+        VVt = vecVecTranspose(V, V);
+        UVt = vecVecTranspose(U, V);
+        VUt = vecVecTranspose(V, U);
+        auto jacobianCont = [nd, stressPrime, stress, UUt, VVt, UVt, VUt] (float rui, float ruj, float rvi, float rvj) -> ngl::Mat3
+        {
+            ngl::Mat3 t1, t2, t3, t4;
+            t1 = UUt * (stressPrime.m_x * ruj * rui);
+            t2 = VVt * (stressPrime.m_y * rvj * rvi);
+            t3 = ((UVt * (ruj * rvi)) + (VUt * (rvj * rui))) * stressPrime.m_z;
+            t4 = ngl::Mat3((stress.m_x * ruj * rui) + (stress.m_y * rvj * rvi) + (stress.m_z * ((ruj * rvi) + (rvj * rui))));
+            return (t1 + t2 + t3 + t4) * nd;
+        };
+        // Jji
+        Jaa = jacobianCont(ru.m_x, ru.m_x, rv.m_x, rv.m_x);
+        Jab = jacobianCont(ru.m_y, ru.m_x, rv.m_y, rv.m_x);
+        Jac = jacobianCont(ru.m_z, ru.m_x, rv.m_z, rv.m_x);
+        Jba = jacobianCont(ru.m_x, ru.m_y, rv.m_x, rv.m_y);
+        Jbb = jacobianCont(ru.m_y, ru.m_y, rv.m_y, rv.m_y);
+        Jbc = jacobianCont(ru.m_z, ru.m_y, rv.m_z, rv.m_y);
+        Jca = jacobianCont(ru.m_x, ru.m_z, rv.m_x, rv.m_z);
+        Jcb = jacobianCont(ru.m_y, ru.m_z, rv.m_y, rv.m_z);
+        Jcc = jacobianCont(ru.m_z, ru.m_z, rv.m_z, rv.m_z);
+        // 1.7 - ADD JACOBIAN CONTRIBUTIONS TO TRIANGLE POINTS
+        m_mspts[_tr.a].addJacobian(_tr.a, Jaa);
+        m_mspts[_tr.a].addJacobian(_tr.b, Jab);
+        m_mspts[_tr.a].addJacobian(_tr.c, Jac);
+        m_mspts[_tr.b].addJacobian(_tr.a, Jba);
+        m_mspts[_tr.b].addJacobian(_tr.b, Jbb);
+        m_mspts[_tr.b].addJacobian(_tr.c, Jbc);
+        m_mspts[_tr.c].addJacobian(_tr.a, Jca);
+        m_mspts[_tr.c].addJacobian(_tr.b, Jcb);
+        m_mspts[_tr.c].addJacobian(_tr.c, Jcc);
+    }
 }
 
 std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
@@ -316,7 +378,7 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
     return x;
 }
 
-void Cloth::rk4Integrate(float _h)
+void Cloth::rk4Integrate(float _h, ngl::Vec3 _externalf)
 {
     std::vector<ngl::Vec3> initpos, initvel, k1pos, k1vel, k2pos, k2vel, k3pos, k3vel, k4pos, k4vel;
     // 3.1 - DETERMINE INIT/K1 VALUES
@@ -333,26 +395,22 @@ void Cloth::rk4Integrate(float _h)
         m_mspts[i].setPos(initpos[i] + (k1pos[i] * _h * 0.5f));
         m_mspts[i].setVel(initvel[i] + (k1vel[i] * _h * 0.5f));
     }
-    for(auto tr : m_triangles)
-    {
-        forceCalcPerTriangle(tr);
-    }
+    nullForces();
+    forceCalc(_h, _externalf, false);
     // 3.2 - DETERMINE K2 VALUES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
         k2pos.push_back(initvel[i] + (k1vel[i] * _h * 0.5f));
         k2vel.push_back(m_mspts[i].forces());
     }
-    // 3.2.4 - UPDATE CLOTH STATE TO MATCH K2, RECALC FORCES
+    // 3.2.5 - UPDATE CLOTH STATE TO MATCH K2, RECALC FORCES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
         m_mspts[i].setPos(initpos[i] + (k2pos[i] * _h * 0.5f));
         m_mspts[i].setVel(initvel[i] + (k2vel[i] * _h * 0.5f));
     }
-    for(auto tr : m_triangles)
-    {
-        forceCalcPerTriangle(tr);
-    }
+    nullForces();
+    forceCalc(_h, _externalf, false);
     // 3.3 - DETERMINE K3 VALUES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
@@ -365,15 +423,13 @@ void Cloth::rk4Integrate(float _h)
         m_mspts[i].setPos(initpos[i] + (k3pos[i] * _h));
         m_mspts[i].setVel(initvel[i] + (k3vel[i] * _h));
     }
-    for(auto tr : m_triangles)
-    {
-        forceCalcPerTriangle(tr);
-    }
+    nullForces();
+    forceCalc(_h, _externalf, false);
     // 3.4 - DETERMINE K4 VALUES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
-        k3pos.push_back(initvel[i] + (k3vel[i] * _h));
-        k3vel.push_back(m_mspts[i].forces());
+        k4pos.push_back(initvel[i] + (k3vel[i] * _h));
+        k4vel.push_back(m_mspts[i].forces());
     }
     // 3.5 - COMBINE K TERMS TO FORM DELTA VEL AND DELTA POS, UPDATE VEL AND POS
     ngl::Vec3 deltavel, deltapos;
@@ -382,8 +438,8 @@ void Cloth::rk4Integrate(float _h)
         deltavel = (1.0f/6.0f) * (k1vel[i] + (2 * (k2vel[i] + k3vel[i])) + k4vel[i]);
         deltapos = (1.0f/6.0f) * (k1pos[i] + (2 * (k2pos[i] + k3pos[i])) + k4pos[i]);
 
-        m_mspts[i].setPos(m.pos() + (deltapos * _h));
-        m_mspts[i].setVel(m.vel() + (deltavel * _h));
+        m_mspts[i].setPos(initpos[i] + (deltapos * _h));
+        m_mspts[i].setVel(initvel[i] + (deltavel * _h));
     }
 }
 
