@@ -28,6 +28,7 @@ public:
     bool fixed() const { return m_fixed; }
     size_t numJacobians() const { return m_jacobians.size(); }
     ngl::Mat3 fetchJacobian(size_t _id) { return m_jacobians[_id]; } // not safe, for testing only
+    ngl::Vec3 getJacobianDiag();
 
     void setPos(const ngl::Vec3 _pos) { m_pos = _pos; }
     void setVel(const ngl::Vec3 _vel);

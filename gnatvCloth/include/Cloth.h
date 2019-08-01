@@ -65,6 +65,7 @@ private:
     boost::math::cubic_b_spline<float> m_shear;
     float m_shearOffset = 0.0f;
     std::vector<size_t> m_corners;
+    std::vector<ngl::Mat3> m_filter;
 
     // Helper Functions
     void readObj(std::string _filename);
@@ -77,6 +78,8 @@ private:
     std::vector<ngl::Vec3> jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec);
     float vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b);
     ngl::Vec3 cleanNearZero(ngl::Vec3 io_a);
+    std::vector<ngl::Mat3> createPrecon();
+    void filter(std::vector<ngl::Vec3> &io_vec);
 };
 
 #endif

@@ -73,14 +73,18 @@ TEST(MassPoint,jacobianModifiers)
     EXPECT_FALSE(m.nullJacobians());
     EXPECT_TRUE(m.numJacobians() == 1);
     EXPECT_TRUE(m.fetchJacobian(2) == ngl::Mat3(1.0f));
+    EXPECT_TRUE(m.getJacobianDiag() == ngl::Vec3(0.0f));
     m.multJacobians(0.5f);
     EXPECT_TRUE(m.fetchJacobian(2) == ngl::Mat3(0.5f));
+    EXPECT_TRUE(m.getJacobianDiag() == ngl::Vec3(0.0f));
     std::vector<size_t> keytest;
     keytest.push_back(2);
     EXPECT_TRUE(m.jacobainKeys() == keytest);
     m.resetJacobians();
     EXPECT_TRUE(m.numJacobians() == 1);
     EXPECT_TRUE(m.nullJacobians());
+    m.addJacobian(0, ngl::Mat3(1.0f));
+    EXPECT_TRUE(m.getJacobianDiag() == ngl::Vec3(1.0f));
 }
 
 TEST(MassPoint,jacobianVectorMult)

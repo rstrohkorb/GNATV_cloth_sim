@@ -56,6 +56,8 @@ void Cloth::init(std::string _filename, initOrientation _o, std::vector<size_t> 
     }
     // assign corners
     m_corners = _corners;
+    // initialize the filter matrix for CG method, assuming all unconstrained
+    m_filter.resize(m_mspts.size());
 }
 
 void Cloth::render(std::vector<ngl::Vec3> &o_vertexData)
@@ -105,16 +107,16 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
     // STEP 1 - FORCE CALCULATIONS
     forceCalc(_h, _externalf, true);
     // STEP 2 - LET'S INTEGRATE
-//    auto deltaVel = conjugateGradient(_h);
-//    // Update particle velocities and positions
-//    for(size_t i = 0; i < m_mspts.size(); ++i)
-//    {
-//        auto newVel = m_mspts[i].vel() + deltaVel[i];
-//        auto newPos = m_mspts[i].pos() + (_h * newVel);
-//        m_mspts[i].setVel(newVel);
-//        m_mspts[i].setPos(newPos);
-//    }
-    rk4Integrate(_h, _externalf);
+    auto deltaVel = conjugateGradient(_h);
+    // Update particle velocities and positions
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        auto newVel = m_mspts[i].vel() + deltaVel[i];
+        auto newPos = m_mspts[i].pos() + (_h * newVel);
+        m_mspts[i].setVel(newVel);
+        m_mspts[i].setPos(newPos);
+    }
+    //rk4Integrate(_h, _externalf);
     // STEP 3 - CLEANUP AND STATE HANDLING
     for(auto& tr : m_triangles)
     {
@@ -126,7 +128,10 @@ void Cloth::fixCorners(std::vector<bool> _isPtFixed)
 {
     for(size_t i = 0; i < m_corners.size(); ++i)
     {
+        // set the point as fixed
         m_mspts[m_corners[i]].setFixed(_isPtFixed[i]);
+        // update the filter matrix
+        m_filter[m_corners[i]] = ngl::Mat3(0.0f);
     }
 }
 
@@ -157,14 +162,19 @@ void Cloth::readObj(std::string _filename)
             // get vertex data
             std::vector<std::string> res;
             boost::split(res, line, [](char c){return c == ' ';});
-            float p0, p1, p2;
-            p0 = std::stof(res[1]);
-            p1 = std::stof(res[2]);
-            p2 = std::stof(res[3]);
-            // Create masspoint with that position, store self id
-            MassPoint m (ngl::Vec3(p0, p1, p2), mass_counter);
-            m_mspts.push_back(m);
-            ++mass_counter;
+            // guard against 'vn'
+            if(res[0] != "vn")
+            {
+                // grab point data
+                float p0, p1, p2;
+                p0 = std::stof(res[1]);
+                p1 = std::stof(res[2]);
+                p2 = std::stof(res[3]);
+                // Create masspoint with that position, store self id
+                MassPoint m (ngl::Vec3(p0, p1, p2), mass_counter);
+                m_mspts.push_back(m);
+                ++mass_counter;
+            }
         }
         break;
         case 'f':
@@ -327,53 +337,93 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
         m.multJacobians(_h * _h);
     }
     // 3.2 - SET INITIAL VALUES
-    std::vector<ngl::Vec3> r, p, vel, hforce, x, Ap, b;
+    std::vector<ngl::Vec3> r, p, vel, hforce, x, Ap, b, bfp, z;
+    std::vector<ngl::Mat3> Pi, PiInv;
+    float alpha, rsold, rsnew, rstest, epsilon;
+
     r.resize(m_mspts.size());
     b.resize(m_mspts.size());
+    bfp.reserve(m_mspts.size());
     vel.reserve(m_mspts.size());
     hforce.reserve(m_mspts.size());
     x.resize(m_mspts.size());
+    z.reserve(m_mspts.size());
     Ap.reserve(m_mspts.size());
+    Pi.reserve(m_mspts.size());
+    PiInv.reserve(m_mspts.size());
+
     // set velocity and force vectors
     for(auto m : m_mspts)
     {
         vel.push_back(m.vel());
         hforce.push_back(m.forces() * _h);
     }
-    // set initial r = b = hf + h^2Jv
+    // set the preconditioning matrix Pi (diag = 1/A diag) and its inverse
+    Pi = createPrecon();
+    for(auto m : Pi)
+    {
+        auto minv = m;
+        minv.m_00 = 1/m.m_00;
+        minv.m_11 = 1/m.m_11;
+        minv.m_22 = 1/m.m_22;
+        PiInv.push_back(minv);
+    }
+    // determine b = hforce + h^2Jvt
     auto jvt = jMatrixMultOp(false, vel);
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
         b[i] = hforce[i] + jvt[i];
     }
-    r = b;
-    // other loop variables
-    p = r;
-    float alpha, rsold, rsnew;
-    rsold = vecVecDotOp(r, r);
-    float epsilon = 1e-5f;
-    size_t k = 0;
-    // 3.3 - CONJUGATE GRADIENT METHOD LOOP
-//    } while(gtMat3(rsnew, rsold * (epsilon * epsilon)));
+    auto bfilter = b;
+    filter(bfilter);
+    // determine r and rstest
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        bfp.push_back(Pi[i] * bfilter[i]);
+    }
+    rstest = vecVecDotOp(bfilter, bfp);
+    r = bfilter; // if x not init to 0, r = filter(b - Ax)
 
-    //while(rsold > epsilon)
-    while( k == 0)
+    // lambda for multiplying r and PiInv
+    auto multPiInv = [PiInv] (std::vector<ngl::Vec3> r) -> std::vector<ngl::Vec3>
+    {
+        std::vector<ngl::Vec3> PiInvR;
+        PiInvR.reserve(PiInv.size());
+        for(size_t i = 0; i < PiInv.size(); ++i)
+        {
+            PiInvR.push_back(PiInv[i] * r[i]);
+        }
+        return PiInvR;
+    };
+
+    // other loop variables
+    p = multPiInv(r);
+    filter(p);
+    rsnew = vecVecDotOp(r, p);
+    epsilon = 1e-5f;
+    size_t k = 0;
+
+    // 3.3 - CONJUGATE GRADIENT METHOD LOOP
+    while(rsnew > (epsilon * rstest))
     {
         Ap = jMatrixMultOp(true, p);
+        filter(Ap);
         auto testval = vecVecDotOp(p, Ap);
-        alpha = rsold / vecVecDotOp(p, Ap);
+        alpha = rsnew / vecVecDotOp(p, Ap);
         for(size_t i = 0; i < m_mspts.size(); ++i)
         {
             x[i] += alpha * p[i];
             r[i] = r[i] - (alpha * Ap[i]);
         }
-        rsnew = vecVecDotOp(r, r);
+        z = multPiInv(r);
+        rsold = rsnew;
+        rsnew = vecVecDotOp(r, z);
         for(size_t i = 0; i < m_mspts.size(); ++i)
         {
-            p[i] = r[i] + ((rsnew/rsold) * p[i]);
+            p[i] = z[i] + ((rsnew/rsold) * p[i]);
         }
+        filter(p);
         ++k;
-        rsold = rsnew;
     }
     return x;
 }
@@ -502,4 +552,28 @@ ngl::Vec3 Cloth::cleanNearZero(ngl::Vec3 io_a)
         io_a.m_z = 0.0f;
     }
     return io_a;
+}
+
+std::vector<ngl::Mat3> Cloth::createPrecon()
+{
+    std::vector<ngl::Mat3> precon;
+    precon.resize(m_mspts.size());
+    for(size_t i = 0; i < m_mspts.size(); ++i)
+    {
+        auto diag = m_mspts[i].getJacobianDiag();
+        auto mass = m_mspts[i].mass();
+        precon[i].m_00 = 1/(mass - diag.m_x);
+        precon[i].m_11 = 1/(mass - diag.m_y);
+        precon[i].m_22 = 1/(mass - diag.m_z);
+    }
+    return precon;
+}
+
+void Cloth::filter(std::vector<ngl::Vec3> &io_vec)
+{
+    // apply filter matrix to the input vector
+    for(size_t i = 0; i < m_filter.size(); ++i)
+    {
+        io_vec[i] = m_filter[i] * io_vec[i];
+    }
 }

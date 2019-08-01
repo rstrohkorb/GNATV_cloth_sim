@@ -1,6 +1,24 @@
 #include <iostream>
 #include "MassPoint.h"
 
+ngl::Vec3 MassPoint::getJacobianDiag()
+{
+    // handle case of no jacobians
+    try
+    {
+        m_jacobians.at(m_self);
+    }
+    catch (std::out_of_range)
+    {
+        return ngl::Vec3(0.0f);
+    }
+    ngl::Vec3 diag;
+    diag.m_x = m_jacobians[m_self].m_00;
+    diag.m_y = m_jacobians[m_self].m_11;
+    diag.m_z = m_jacobians[m_self].m_22;
+    return diag;
+}
+
 void MassPoint::setVel(const ngl::Vec3 _vel)
 {
     if(!m_fixed)
@@ -71,7 +89,6 @@ void MassPoint::addJacobian(const size_t _id, const ngl::Mat3 _jacobian)
     {
         m_jacobians[_id] = ngl::Mat3(0.0f);
     }
-
     // add the jacobian contribution
     m_jacobians[_id] += _jacobian;
 }

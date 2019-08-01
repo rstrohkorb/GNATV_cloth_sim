@@ -30,10 +30,11 @@ NGLScene::~NGLScene()
 
 void NGLScene::timerEvent(QTimerEvent *_event)
 {
-    for(size_t i = 0; i < 10; ++i)
-    {
-        m_cloth.update(0.001f, ngl::Vec3(0.0f));
-    }
+//    for(size_t i = 0; i < 10; ++i)
+//    {
+//        m_cloth.update(0.001f, ngl::Vec3(0.0f));
+//    }
+    m_cloth.update(0.005f, ngl::Vec3(0.0f));
     update();
 }
 
