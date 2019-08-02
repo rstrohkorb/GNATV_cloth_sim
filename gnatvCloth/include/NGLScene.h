@@ -99,6 +99,7 @@ private:
     /// load matrix to shader
     void loadMatrixToColorShader(const ngl::Mat4 &_tx, const ngl::Vec4 &_color);
     void loadMatrixToPBRShader(const ngl::Mat4 &_tx);
+    void loadMatrixToCheckerShader(const ngl::Mat4 &_tx);
 };
 
 

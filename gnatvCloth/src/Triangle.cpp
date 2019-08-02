@@ -15,48 +15,21 @@ void Triangle::setVertices(const ngl::Vec3 _a, const ngl::Vec3 _b, const ngl::Ve
     update_sa();
 }
 
-void Triangle::computeR(initOrientation _o)
+void Triangle::computeR(std::function<ngl::Vec2(ngl::Vec3)> _toParam)
 {
-    float ua, ub, uc, va, vb, vc;
-    //  handle orientation
-    switch(_o)
-    {
-    case XY:
-    {
-        ua = m_a.m_x;
-        va = m_a.m_y;
-        ub = m_b.m_x;
-        vb = m_b.m_y;
-        uc = m_c.m_x;
-        vc = m_c.m_y;
-    } break;
-    case XZ:
-    {
-        ua = m_a.m_x;
-        va = m_a.m_z;
-        ub = m_b.m_x;
-        vb = m_b.m_z;
-        uc = m_c.m_x;
-        vc = m_c.m_z;
-    } break;
-    case YZ:
-    {
-        ua = m_a.m_y;
-        va = m_a.m_z;
-        ub = m_b.m_y;
-        vb = m_b.m_z;
-        uc = m_c.m_y;
-        vc = m_c.m_z;
-    } break;
-    }
+    // get 2D parameterized coords
+    ngl::Vec2 ap, bp, cp;
+    ap = _toParam(m_a);
+    bp = _toParam(m_b);
+    cp = _toParam(m_c);
+    auto d = m_sa * 2;
     // calculate r-weights
-    auto invd = 1/(m_sa * 2);
-    m_ru.m_x = invd * (vb - vc);
-    m_ru.m_y = invd * (vc - va);
-    m_ru.m_z = invd * (va - vb);
-    m_rv.m_x = invd * (uc - ub);
-    m_rv.m_y = invd * (ua - uc);
-    m_rv.m_z = invd * (ub - ua);
+    m_ru.m_x = (1/d) * (bp.m_y - cp.m_y);
+    m_ru.m_y = (1/d) * (cp.m_y - ap.m_y);
+    m_ru.m_z = (1/d) * (ap.m_y - bp.m_y);
+    m_rv.m_x = (1/d) * (cp.m_x - bp.m_x);
+    m_rv.m_y = (1/d) * (ap.m_x - cp.m_x);
+    m_rv.m_z = (1/d) * (bp.m_x - ap.m_x);
 }
 
 void Triangle::update_sa()

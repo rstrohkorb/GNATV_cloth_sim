@@ -27,7 +27,7 @@ Cloth::Cloth(material_type _mt)
     }
 }
 
-void Cloth::init(std::string _filename, initOrientation _o, std::vector<size_t> _corners)
+void Cloth::init(std::string _filename, std::function<ngl::Vec2(ngl::Vec3)> _toParam, std::vector<size_t> _corners)
 {
     // read in object data
     readObj(_filename);
@@ -35,7 +35,7 @@ void Cloth::init(std::string _filename, initOrientation _o, std::vector<size_t> 
     for(auto& tr : m_triangles)
     {
         tr.tri.setVertices(m_mspts[tr.a].pos(), m_mspts[tr.b].pos(), m_mspts[tr.c].pos());
-        tr.tri.computeR(_o);
+        tr.tri.computeR(_toParam);
     }
     // determine mass of the masspoints
     std::vector<std::vector<float>> massCollect;
@@ -60,7 +60,7 @@ void Cloth::init(std::string _filename, initOrientation _o, std::vector<size_t> 
     m_filter.resize(m_mspts.size());
 }
 
-void Cloth::render(std::vector<ngl::Vec3> &o_vertexData)
+void Cloth::render(std::vector<float> &o_vertexData)
 {
     // determine vertex normals
     std::vector<ngl::Vec3> vNorms;
@@ -86,17 +86,30 @@ void Cloth::render(std::vector<ngl::Vec3> &o_vertexData)
             vn.normalize();
         }
     }
-    // spit out the triangle/vertex data
-    o_vertexData.reserve(m_triangles.size() * 2);
+
+    // lambda for adding the data
+    auto listAdd = [&o_vertexData] (ngl::Vec3 vert, ngl::Vec3 norm, ngl::Vec2 uv) -> void
+    {
+        // position
+        o_vertexData.push_back(vert.m_x);
+        o_vertexData.push_back(vert.m_y);
+        o_vertexData.push_back(vert.m_z);
+        // normal
+        o_vertexData.push_back(norm.m_x);
+        o_vertexData.push_back(norm.m_y);
+        o_vertexData.push_back(norm.m_z);
+        // uv
+        o_vertexData.push_back(uv.m_x);
+        o_vertexData.push_back(uv.m_y);
+    };
+
+    // spit out the triangle/vertex/uv data
+    o_vertexData.reserve(m_triangles.size() * 8);
     for(auto tr : m_triangles)
     {
-        // interlaced - vertex position, vertex normal
-        o_vertexData.push_back(tr.tri.v1());
-        o_vertexData.push_back(vNorms[tr.a]);
-        o_vertexData.push_back(tr.tri.v2());
-        o_vertexData.push_back(vNorms[tr.b]);
-        o_vertexData.push_back(tr.tri.v3());
-        o_vertexData.push_back(vNorms[tr.c]);
+        listAdd(tr.tri.v1(), vNorms[tr.a], tr.tri.v1UV());
+        listAdd(tr.tri.v2(), vNorms[tr.b], tr.tri.v2UV());
+        listAdd(tr.tri.v3(), vNorms[tr.c], tr.tri.v3UV());
     }
 }
 
@@ -147,6 +160,7 @@ std::vector<bool> Cloth::isCornerFixed() const
 
 void Cloth::readObj(std::string _filename)
 {
+    std::vector<ngl::Vec2> uvs;
     // import cloth data from obj
     std::ifstream clothFile;
     std::string line;
@@ -159,11 +173,19 @@ void Cloth::readObj(std::string _filename)
         {
         case 'v':
         {
-            // get vertex data
+            // grab data
             std::vector<std::string> res;
             boost::split(res, line, [](char c){return c == ' ';});
-            // guard against 'vn'
-            if(res[0] != "vn")
+            // handle texture coords
+            if(res[0] == "vt")
+            {
+                float p0, p1;
+                p0 = std::stof(res[1]);
+                p1 = std::stof(res[2]);
+                uvs.push_back(ngl::Vec2(p0, p1));
+            }
+            // handle vertex coordinates
+            else if(res[0] != "vn")
             {
                 // grab point data
                 float p0, p1, p2;
@@ -181,11 +203,25 @@ void Cloth::readObj(std::string _filename)
         {
             // get triangle index data
             Triref tr;
-            std::vector<std::string> res;
-            boost::split(res, line, [](char c){return c == ' ';});
-            tr.a = stoul(res[1]) - 1;  // subtract 1 since obj files index faces at 1
-            tr.b = stoul(res[2]) - 1;
-            tr.c = stoul(res[3]) - 1;
+            std::vector<std::string> lineres;
+            std::vector<std::string> numres1;
+            std::vector<std::string> numres2;
+            std::vector<std::string> numres3;
+            // split the line
+            boost::split(lineres, line, [](char c){return c == ' ';});
+            // split the first vertex, assign
+            boost::split(numres1, lineres[1], [](char c){return c == '/';});
+            tr.a = stoul(numres1[0]) - 1;  // subtract 1 since obj files index faces at 1
+            tr.tri.setUV1(uvs[stoul(numres1[1]) - 1]);
+            // split the second vertex, assign
+            boost::split(numres2, lineres[2], [](char c){return c == '/';});
+            tr.b = stoul(numres2[0]) - 1;  // subtract 1 since obj files index faces at 1
+            tr.tri.setUV2(uvs[stoul(numres2[1]) - 1]);
+            // split the third vertex, assign
+            boost::split(numres3, lineres[3], [](char c){return c == '/';});
+            tr.c = stoul(numres3[0]) - 1;  // subtract 1 since obj files index faces at 1
+            tr.tri.setUV3(uvs[stoul(numres3[1]) - 1]);
+            // push back triangle
             m_triangles.push_back(tr);
         }
         break;

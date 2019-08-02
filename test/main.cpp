@@ -110,6 +110,9 @@ TEST(Triangle,defaultctor)
     EXPECT_FLOAT_EQ(t.surface_area(), 0.0f);
     EXPECT_TRUE(t.ru() == ngl::Vec3(1.0f));
     EXPECT_TRUE(t.rv() == ngl::Vec3(1.0f));
+    EXPECT_TRUE(t.v1UV() == ngl::Vec2(0.0f, 0.0f));
+    EXPECT_TRUE(t.v2UV() == ngl::Vec2(0.0f, 1.0f));
+    EXPECT_TRUE(t.v3UV() == ngl::Vec2(1.0f, 0.0f));
 }
 
 TEST(Triangle,userctor)
@@ -129,20 +132,28 @@ TEST(Triangle,setVertices)
     EXPECT_TRUE(t.v2() == ngl::Vec3(0.5f));
     EXPECT_TRUE(t.v3() == ngl::Vec3(0.0f, 1.0f, 1.0f));
     EXPECT_FLOAT_EQ(t.surface_area(), 1.0606601);
+    t.setUV1(ngl::Vec2(0.5f, 0.5f));
+    t.setUV2(ngl::Vec2(0.2f, 0.2f));
+    t.setUV3(ngl::Vec2(0.2f, 0.5f));
+    EXPECT_TRUE(t.v1UV() == ngl::Vec2(0.5f, 0.5f));
+    EXPECT_TRUE(t.v2UV() == ngl::Vec2(0.2f, 0.2f));
+    EXPECT_TRUE(t.v3UV() == ngl::Vec2(0.2f, 0.5f));
 }
 
 TEST(Triangle,computeR)
 {
-    Triangle t1(ngl::Vec3(2.0f, 2.0f, 0.0f), ngl::Vec3(0.5f, 0.5f, 0.0f), ngl::Vec3(0.0f, 1.0f, 0.0f));
-    Triangle t2(ngl::Vec3(2.0f, 0.0f, 2.0f), ngl::Vec3(0.5f, 0.0f, 0.5f), ngl::Vec3(0.0f, 0.0f, 1.0f));
-    Triangle t3(ngl::Vec3(0.0f, 2.0f, 2.0f), ngl::Vec3(0.0f, 0.5f, 0.5f), ngl::Vec3(0.0f, 0.0f, 1.0f));
-    t1.computeR(XY);
-    t2.computeR(XZ);
-    t3.computeR(YZ);
-    EXPECT_TRUE(t1.ru() == t2.ru() && t1.ru() == t3.ru());
-    EXPECT_TRUE(t1.rv() == t2.rv() && t1.rv() == t3.rv());
-    EXPECT_TRUE(t1.ru() == ngl::Vec3(-0.333333f, -0.6666667f, 1.0f));
-    EXPECT_TRUE(t1.rv() == ngl::Vec3(-0.333333f, 1.3333333f, -1.0f));
+    auto toParam = [](ngl::Vec3 _v) -> ngl::Vec2
+    {
+        ngl::Vec2 n;
+        n.m_x = _v.m_x;
+        n.m_y = _v.m_z;
+        return n;
+    };
+    Triangle t;
+    t.setVertices(ngl::Vec3(2.0f), ngl::Vec3(0.5f), ngl::Vec3(0.0f, 1.0f, 1.0f));
+    t.computeR(toParam);
+    EXPECT_TRUE(t.ru() == ngl::Vec3(-0.235702f, -0.471405f, 0.707107f));
+    EXPECT_TRUE(t.rv() == ngl::Vec3(-0.235702f, 0.942809f, -0.707107f));
 }
 
 TEST(Cloth,userctor)
@@ -155,20 +166,34 @@ TEST(Cloth,userctor)
 
 TEST(Cloth,init)
 {
-    std::vector<size_t> corners = {0, 29, 870, 899};
+    std::vector<size_t> corners = {0, 1, 2, 3};
+    auto toParam = [](ngl::Vec3 _v) -> ngl::Vec2
+    {
+        ngl::Vec2 n;
+        n.m_x = _v.m_x;
+        n.m_y = _v.m_z;
+        return n;
+    };
     Cloth c(WOOL);
-    c.init("../gnatvCloth/obj/clothObject.obj", XY, corners);
-    EXPECT_TRUE(c.numMasses() == 900);
-    EXPECT_TRUE(c.numTriangles() == 1682);
-    EXPECT_FLOAT_EQ(c.firstMass(), 0.0029726522);
+    c.init("../gnatvCloth/obj/clothXZUV.obj", toParam, corners);
+    EXPECT_TRUE(c.numMasses() == 289);
+    EXPECT_TRUE(c.numTriangles() == 512);
+    EXPECT_FLOAT_EQ(c.firstMass(), 0.017215004f);
     EXPECT_TRUE(corners == c.corners());
 }
 
 TEST(Cloth,fixCorners)
 {
-    std::vector<size_t> corners = {0, 29, 870, 899};
+    std::vector<size_t> corners = {0, 1, 2, 3};
+    auto toParam = [](ngl::Vec3 _v) -> ngl::Vec2
+    {
+        ngl::Vec2 n;
+        n.m_x = _v.m_x;
+        n.m_y = _v.m_z;
+        return n;
+    };
     Cloth c(WOOL);
-    c.init("../gnatvCloth/obj/clothObject.obj", XY, corners);
+    c.init("../gnatvCloth/obj/clothXZUV.obj", toParam, corners);
     std::vector<bool> c1, c2, c3, c4;
     c1 = {false, false, true, true};
     c2 = {true, false, true, false};

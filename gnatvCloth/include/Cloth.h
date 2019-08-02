@@ -2,6 +2,7 @@
 #define CLOTH_H_
 
 #include <vector>
+#include <functional>
 #include <boost/math/interpolators/cubic_b_spline.hpp>
 #include "MassPoint.h"
 #include "Triangle.h"
@@ -25,8 +26,8 @@ public:
     Cloth(material_type _mt);
 
     // Initializers
-    void init(std::string _filename, initOrientation _o,
-              std::vector<size_t> _corners);               // inits to obj file
+    void init(std::string _filename, std::function<ngl::Vec2(ngl::Vec3)> _toParam,
+              std::vector<size_t> _corners);                // inits to obj file
 
     // Getters/Setters
     size_t numMasses() const { return m_mspts.size(); }
@@ -37,7 +38,7 @@ public:
     std::vector<size_t> corners() const { return m_corners; }
 
     // Render
-    void render(std::vector<ngl::Vec3> &o_vertexData);
+    void render(std::vector<float> &o_vertexData);
 
     // Run simulation
     void update(float _h, ngl::Vec3 _externalf);

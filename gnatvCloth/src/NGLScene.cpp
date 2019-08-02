@@ -17,9 +17,17 @@ NGLScene::NGLScene()
   //std::vector<size_t> corners = {0, 29, 870, 899};
   std::vector<size_t> corners = {0, 9, 90, 99};
   m_cloth = Cloth(WOOL);
-  m_cloth.init("obj/cloth.obj", XZ, corners);
-  std::vector<bool> fixedCorners = {1, 1, 1, 1};
-  m_cloth.fixCorners(fixedCorners);
+  // lambda to get the cloth points from world space into 2D parametric space
+  auto toParam = [](ngl::Vec3 _v) -> ngl::Vec2
+  {
+      ngl::Vec2 n;
+      n.m_x = _v.m_x;
+      n.m_y = _v.m_z;
+      return n;
+  };
+  m_cloth.init("obj/clothuvtest.obj", toParam, corners);
+  //std::vector<bool> fixedCorners = {1, 1, 1, 1};
+  //m_cloth.fixCorners(fixedCorners);
 }
 
 
@@ -54,7 +62,7 @@ void NGLScene::initializeGL()
   // be done once we have a valid GL context but before we call any GL commands. If we dont do
   // this everything will crash
   ngl::NGLInit::instance();
-  glClearColor(0.6f, 0.6f, 0.6f, 1.0f);			   // Grey Background
+  glClearColor(0.2f, 0.2f, 0.2f, 1.0f);			   // Grey Background
   // enable depth testing for drawing
   glEnable(GL_DEPTH_TEST);
   // enable multisampling for smoother drawing
@@ -94,6 +102,15 @@ void NGLScene::initializeGL()
   shader->setUniform("roughness",0.78f);
   shader->setUniform("ao",0.2f);
 
+  // ngl checker shader
+  shader->use(ngl::nglCheckerShader);
+  shader->setUniform("lightDiffuse",1.0f,1.0f,1.0f,1.0f);
+  shader->setUniform("checkOn",true);
+  shader->setUniform("lightPos",m_lightPos.toVec3());
+  shader->setUniform("colour1",0.9f,0.9f,0.9f,1.0f);
+  shader->setUniform("colour2",0.6f,0.6f,0.6f,1.0f);
+  shader->setUniform("checkSize",10.0f);
+
   //make a simple vao for the cloth triangles
   m_clothVAO = ngl::VAOFactory::createVAO(ngl::simpleVAO, GL_TRIANGLES);
 }
@@ -112,19 +129,35 @@ void NGLScene::paintGL()
   mouseRotation = roty * rotx;
 
   // render cloth
-  std::vector<ngl::Vec3> tri;
+  std::vector<float> tri;
   m_cloth.render(tri);
 
   m_clothVAO->bind();
-  m_clothVAO->setData(ngl::SimpleVAO::VertexData(tri.size()*sizeof(ngl::Vec3),
-                                          tri[0].m_x));
-  m_clothVAO->setVertexAttributePointer(0, 3, GL_FLOAT, 2*sizeof(ngl::Vec3), 0);
-  m_clothVAO->setVertexAttributePointer(1, 3, GL_FLOAT, 2*sizeof(ngl::Vec3), 3);
-  m_clothVAO->setNumIndices(tri.size()/2);
+  m_clothVAO->setData(ngl::SimpleVAO::VertexData(tri.size()*sizeof(float), tri[0]));
 
-  loadMatrixToPBRShader(mouseRotation);
+  m_clothVAO->setVertexAttributePointer(0, 3, GL_FLOAT, 8*sizeof(float), 0);
+  m_clothVAO->setVertexAttributePointer(1, 3, GL_FLOAT, 8*sizeof(float), 3);
+  m_clothVAO->setVertexAttributePointer(2, 2, GL_FLOAT, 8*sizeof(float), 6);
+  m_clothVAO->setNumIndices((tri.size()/8)*3);
+
+  //loadMatrixToPBRShader(mouseRotation);
+  loadMatrixToCheckerShader(mouseRotation);
+
   m_clothVAO->draw();
   m_clothVAO->unbind();
+}
+
+void NGLScene::loadMatrixToCheckerShader(const ngl::Mat4 &_tx)
+{
+    ngl::ShaderLib* shader = ngl::ShaderLib::instance();
+    shader->use(ngl::nglCheckerShader);
+//    ngl::Mat4 tx;
+//    tx.translate(0.0f,-0.45f,0.0f);
+    ngl::Mat4 MVP= m_project * m_view * _tx;
+    ngl::Mat3 normalMatrix= m_view * _tx;
+    normalMatrix.inverse().transpose();
+    shader->setUniform("MVP",MVP);
+    shader->setUniform("normalMatrix",normalMatrix);
 }
 
 void NGLScene::loadMatrixToPBRShader(const ngl::Mat4 &_tx)
