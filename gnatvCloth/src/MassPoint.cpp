@@ -1,7 +1,7 @@
 #include <iostream>
 #include "MassPoint.h"
 
-ngl::Vec3 MassPoint::getJacobianDiag()
+ngl::Vec3 MassPoint::getJposDiag()
 {
     // handle case of no jacobians
     try
@@ -12,10 +12,30 @@ ngl::Vec3 MassPoint::getJacobianDiag()
     {
         return ngl::Vec3(0.0f);
     }
+    // get diag
     ngl::Vec3 diag;
-    diag.m_x = m_jacobians[m_self].m_00;
-    diag.m_y = m_jacobians[m_self].m_11;
-    diag.m_z = m_jacobians[m_self].m_22;
+    diag.m_x = m_jacobians[m_self].Jpos.m_00;
+    diag.m_y = m_jacobians[m_self].Jpos.m_11;
+    diag.m_z = m_jacobians[m_self].Jpos.m_22;
+    return diag;
+}
+
+ngl::Vec3 MassPoint::getJvelDiag()
+{
+    // handle case of no jacobians
+    try
+    {
+        m_jacobians.at(m_self);
+    }
+    catch (std::out_of_range)
+    {
+        return ngl::Vec3(0.0f);
+    }
+    // get diag
+    ngl::Vec3 diag;
+    diag.m_x = m_jacobians[m_self].Jvel.m_00;
+    diag.m_y = m_jacobians[m_self].Jvel.m_11;
+    diag.m_z = m_jacobians[m_self].Jvel.m_22;
     return diag;
 }
 
@@ -62,7 +82,8 @@ bool MassPoint::nullJacobians()
         return true;
     for(auto pair : m_jacobians)
     {
-        if(pair.second == ngl::Mat3(0.0f)) continue;
+        if((pair.second.Jpos == ngl::Mat3(0.0f)) &&
+                (pair.second.Jvel == ngl::Mat3(0.0f))) continue;
         else
             return false;
     }
@@ -73,48 +94,98 @@ void MassPoint::resetJacobians()
 {
     for(auto &pair : m_jacobians)
     {
-        // zero out the matrix
-        pair.second.null();
+        // zero out the matrices
+        pair.second.Jpos.null();
+        pair.second.Jvel.null();
     }
 }
 
-void MassPoint::addJacobian(const size_t _id, const ngl::Mat3 _jacobian)
+void MassPoint::addJpos(const size_t _id, const ngl::Mat3 _jpos)
 {
-    // make sure initial matrix is zero'd out
+    // make sure initial matrices are zero'd out
     try
     {
         m_jacobians.at(_id);
     }
     catch (std::out_of_range)
     {
-        m_jacobians[_id] = ngl::Mat3(0.0f);
+        m_jacobians[_id].Jpos = ngl::Mat3(0.0f);
+        m_jacobians[_id].Jvel = ngl::Mat3(0.0f);
     }
     // add the jacobian contribution
-    m_jacobians[_id] += _jacobian;
+    m_jacobians[_id].Jpos += _jpos;
 }
 
-void MassPoint::multJacobians(const float _hsq)
+void MassPoint::addJvel(const size_t _id, const ngl::Mat3 _jvel)
+{
+    // make sure initial matrices are zero'd out
+    try
+    {
+        m_jacobians.at(_id);
+    }
+    catch (std::out_of_range)
+    {
+        m_jacobians[_id].Jpos = ngl::Mat3(0.0f);
+        m_jacobians[_id].Jvel = ngl::Mat3(0.0f);
+    }
+    // add the jacobian contribution
+    m_jacobians[_id].Jvel += _jvel;
+}
+
+void MassPoint::multJpos(const float _hsq)
 {
     for(auto &pair : m_jacobians)
     {
-        pair.second *= _hsq;
+        pair.second.Jpos *= _hsq;
     }
 }
 
-ngl::Vec3 MassPoint::jacobianVectorMult(const bool _isA, std::unordered_map<size_t, ngl::Vec3> _vec)
+void MassPoint::multJvel(const float _h)
+{
+    for(auto &pair : m_jacobians)
+    {
+        pair.second.Jvel *= _h;
+    }
+}
+
+ngl::Vec3 MassPoint::jacobianVectorMult(const bool _isA, const bool _useJvel, const bool _useDamping,
+                                        std::unordered_map<size_t, ngl::Vec3> _vec, float _h)
 {
     ngl::Vec3 result = ngl::Vec3(0.0f);
     for(auto &pair : m_jacobians)
     {
-        ngl::Mat3 jmat = pair.second;
+        ngl::Mat3 jmat = pair.second.Jpos;
         if(_isA)
         {
             jmat *= -1.0f;
+            if(_useJvel)
+            {
+                auto jvel = pair.second.Jvel;
+                jvel *= -1.0f;
+                jmat += jvel;
+            }
             if(pair.first == m_self)
             {
                 jmat.m_00 += m_mass;
                 jmat.m_11 += m_mass;
                 jmat.m_22 += m_mass;
+                if(_useDamping)
+                {
+                    auto n = m_jacobians.size() - 1;
+                    jmat.m_00 += (n *_h * m_dampingCoefficient);
+                    jmat.m_11 += (n *_h * m_dampingCoefficient);
+                    jmat.m_22 += (n *_h * m_dampingCoefficient);
+                }
+            }
+
+        }
+        else
+        {
+            if(_useDamping && (pair.first == m_self))
+            {
+                jmat.m_00 += (_h * m_dampingCoefficient);
+                jmat.m_11 += (_h * m_dampingCoefficient);
+                jmat.m_22 += (_h * m_dampingCoefficient);
             }
         }
         result += jmat * _vec[pair.first];

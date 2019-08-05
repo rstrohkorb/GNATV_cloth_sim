@@ -18,17 +18,19 @@ TEST(MassPoint,defaultctor)
     EXPECT_TRUE(m.forces() == ngl::Vec3(0.0f));
     EXPECT_FLOAT_EQ(m.mass(), 1.0f);
     EXPECT_FALSE(m.fixed());
+    EXPECT_FLOAT_EQ(m.dampingCoefficient(), 1.0f);
     EXPECT_TRUE(m.numJacobians() == 0);
     EXPECT_TRUE(m.nullJacobians());
 }
 
 TEST(MassPoint,userctor)
 {
-    MassPoint m1(ngl::Vec3(1.0f), 0, 0.4f, true);
+    MassPoint m1(ngl::Vec3(1.0f), 0, 0.4f, true, 5.0f);
     MassPoint m2(ngl::Vec3(1.0f), 0, 0.4f);
     EXPECT_TRUE(m1.pos() == ngl::Vec3(1.0f));
     EXPECT_FLOAT_EQ(m1.mass(), 0.4f);
     EXPECT_TRUE(m1.fixed());
+    EXPECT_FLOAT_EQ(m1.dampingCoefficient(), 5.0f);
     EXPECT_TRUE(m2.pos() == ngl::Vec3(1.0f));
     EXPECT_FLOAT_EQ(m2.mass(), 0.4f);
     EXPECT_FALSE(m2.fixed());
@@ -48,6 +50,8 @@ TEST(MassPoint,setVariables)
     EXPECT_TRUE(m.vel() == ngl::Vec3(0.0f));
     m.setVel(ngl::Vec3(3.0f));
     EXPECT_TRUE(m.vel() == ngl::Vec3(0.0f));
+    m.setDamping(3.0f);
+    EXPECT_FLOAT_EQ(m.dampingCoefficient(), 3.0f);
 }
 
 TEST(MassPoint,forceModifiers)
@@ -66,39 +70,80 @@ TEST(MassPoint,forceModifiers)
     EXPECT_TRUE(m.forces() == ngl::Vec3(0.0f));
 }
 
-TEST(MassPoint,jacobianModifiers)
+TEST(MassPoint,addPositionJacobian)
 {
     MassPoint m;
-    m.addJacobian(2, ngl::Mat3(1.0f));
+    m.addJpos(2, ngl::Mat3(1.0f));
     EXPECT_FALSE(m.nullJacobians());
     EXPECT_TRUE(m.numJacobians() == 1);
-    EXPECT_TRUE(m.fetchJacobian(2) == ngl::Mat3(1.0f));
-    EXPECT_TRUE(m.getJacobianDiag() == ngl::Vec3(0.0f));
-    m.multJacobians(0.5f);
-    EXPECT_TRUE(m.fetchJacobian(2) == ngl::Mat3(0.5f));
-    EXPECT_TRUE(m.getJacobianDiag() == ngl::Vec3(0.0f));
+    EXPECT_TRUE(m.fetchJpos(2) == ngl::Mat3(1.0f));
+    EXPECT_TRUE(m.getJposDiag() == ngl::Vec3(0.0f));
+    m.multJpos(0.5f);
+    EXPECT_TRUE(m.fetchJpos(2) == ngl::Mat3(0.5f));
+    EXPECT_TRUE(m.getJposDiag() == ngl::Vec3(0.0f));
+    m.addJpos(0, ngl::Mat3(1.0f));
+    EXPECT_TRUE(m.getJposDiag() == ngl::Vec3(1.0f));
+}
+
+TEST(MassPoint,addVelocityJacobian)
+{
+    MassPoint m;
+    m.addJvel(2, ngl::Mat3(2.0f));
+    EXPECT_FALSE(m.nullJacobians());
+    EXPECT_TRUE(m.numJacobians() == 1);
+    EXPECT_TRUE(m.fetchJvel(2) == ngl::Mat3(2.0f));
+    EXPECT_TRUE(m.getJvelDiag() == ngl::Vec3(0.0f));
+    m.multJvel(0.5f);
+    EXPECT_TRUE(m.fetchJvel(2) == ngl::Mat3(1.0f));
+    EXPECT_TRUE(m.getJvelDiag() == ngl::Vec3(0.0f));
+    m.addJvel(0, ngl::Mat3(1.0f));
+    EXPECT_TRUE(m.getJvelDiag() == ngl::Vec3(1.0f));
+}
+
+TEST(MassPoint,jacobianKeys)
+{
+    MassPoint m;
+    m.addJpos(2, ngl::Mat3(1.0f));
+    m.addJvel(2, ngl::Mat3(2.0f));
+
     std::vector<size_t> keytest;
     keytest.push_back(2);
-    EXPECT_TRUE(m.jacobainKeys() == keytest);
+    EXPECT_TRUE(m.jacobainKeys() == keytest); 
+}
+
+TEST(MassPoint,resetJacobians)
+{
+    MassPoint m;
+    m.addJpos(2, ngl::Mat3(1.0f));
+    m.addJvel(2, ngl::Mat3(2.0f));
+
     m.resetJacobians();
     EXPECT_TRUE(m.numJacobians() == 1);
     EXPECT_TRUE(m.nullJacobians());
-    m.addJacobian(0, ngl::Mat3(1.0f));
-    EXPECT_TRUE(m.getJacobianDiag() == ngl::Vec3(1.0f));
 }
 
 TEST(MassPoint,jacobianVectorMult)
 {
-    MassPoint m(ngl::Vec3(0.0f), 0, 0.5f);
-    m.addJacobian(0, ngl::Mat3(1.0f));
-    m.addJacobian(2, ngl::Mat3(1.0f));
+    MassPoint m(ngl::Vec3(0.0f), 0, 0.5f, false, 0.5f);
+    m.addJpos(0, ngl::Mat3(1.0f));
+    m.addJvel(0, ngl::Mat3(2.0f));
+    m.addJpos(2, ngl::Mat3(1.0f));
+    m.addJvel(2, ngl::Mat3(2.0f));
     std::unordered_map<size_t, ngl::Vec3> testmap;
     testmap[0] = ngl::Vec3(2.0f);
     testmap[2] = ngl::Vec3(3.0f);
-    auto resA = m.jacobianVectorMult(true, testmap);
-    auto resNotA = m.jacobianVectorMult(false, testmap);
-    EXPECT_TRUE(resA == ngl::Vec3(-4.0f));
-    EXPECT_TRUE(resNotA == ngl::Vec3(5.0f));
+    auto resAveldamp = m.jacobianVectorMult(true, true, true, testmap);
+    auto resAvelNodamp = m.jacobianVectorMult(true, true, false, testmap);
+    auto resAnoVeldamp = m.jacobianVectorMult(true, false, true, testmap);
+    auto resAnoVelNodamp = m.jacobianVectorMult(true, false, false, testmap);
+    auto resNotAdamp = m.jacobianVectorMult(false, false, true, testmap);
+    auto resNotANodamp = m.jacobianVectorMult(false, false, false, testmap);
+    EXPECT_TRUE(resAveldamp == ngl::Vec3(-11.5f));
+    EXPECT_TRUE(resAvelNodamp == ngl::Vec3(-14.0f));
+    EXPECT_TRUE(resAnoVeldamp == ngl::Vec3(-1.5f));
+    EXPECT_TRUE(resAnoVelNodamp == ngl::Vec3(-4.0f));
+    EXPECT_TRUE(resNotAdamp == ngl::Vec3(7.5f));
+    EXPECT_TRUE(resNotANodamp == ngl::Vec3(5.0f));
 }
 
 TEST(Triangle,defaultctor)
@@ -175,7 +220,7 @@ TEST(Cloth,init)
         return n;
     };
     Cloth c(WOOL);
-    c.init("../gnatvCloth/obj/clothXZUV.obj", toParam, corners);
+    c.init("../gnatvCloth/obj/clothXZUV.obj", toParam, corners, 2.0f);
     EXPECT_TRUE(c.numMasses() == 289);
     EXPECT_TRUE(c.numTriangles() == 512);
     EXPECT_FLOAT_EQ(c.firstMass(), 0.017215004f);
@@ -193,7 +238,7 @@ TEST(Cloth,fixCorners)
         return n;
     };
     Cloth c(WOOL);
-    c.init("../gnatvCloth/obj/clothXZUV.obj", toParam, corners);
+    c.init("../gnatvCloth/obj/clothXZUV.obj", toParam, corners, 2.0f);
     std::vector<bool> c1, c2, c3, c4;
     c1 = {false, false, true, true};
     c2 = {true, false, true, false};

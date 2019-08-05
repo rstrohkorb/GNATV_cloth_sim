@@ -27,7 +27,8 @@ Cloth::Cloth(material_type _mt)
     }
 }
 
-void Cloth::init(std::string _filename, std::function<ngl::Vec2(ngl::Vec3)> _toParam, std::vector<size_t> _corners)
+void Cloth::init(std::string _filename, std::function<ngl::Vec2(ngl::Vec3)> _toParam,
+                 std::vector<size_t> _corners, float _dampingCoefficient)
 {
     // read in object data
     readObj(_filename);
@@ -48,11 +49,12 @@ void Cloth::init(std::string _filename, std::function<ngl::Vec2(ngl::Vec3)> _toP
         massCollect[t.b].push_back(tmass);
         massCollect[t.c].push_back(tmass);
     }
-    // for each masspoint, sum over collected values to get mass
+    // for each masspoint, sum over collected values to get mass, set damping
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
         auto totalMass = std::accumulate(massCollect[i].begin(), massCollect[i].end(), 0.0f);
         m_mspts[i].setMass(totalMass/3);
+        m_mspts[i].setDamping(_dampingCoefficient);
     }
     // assign corners
     m_corners = _corners;
@@ -115,12 +117,14 @@ void Cloth::render(std::vector<float> &o_vertexData)
 
 void Cloth::update(float _h, ngl::Vec3 _externalf)
 {
+    bool useJvel = false;
+    bool useDamping = true;
     // STEP 0 - ZERO OUT CURRENT FORCES/JACOBIANS ON EACH MASSPOINT
     nullForces();
     // STEP 1 - FORCE CALCULATIONS
-    forceCalc(_h, _externalf, true);
+    forceCalc(_h, _externalf, true, useJvel);
     // STEP 2 - LET'S INTEGRATE
-    auto deltaVel = conjugateGradient(_h);
+    auto deltaVel = conjugateGradient(_h, useJvel, useDamping);
     // Update particle velocities and positions
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
@@ -240,12 +244,12 @@ void Cloth::nullForces()
     }
 }
 
-void Cloth::forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians)
+void Cloth::forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians, bool _useJvel)
 {
     // Internal force calculations per triangle
     for(auto tr : m_triangles)
     {
-        forceCalcPerTriangle(tr, _calcJacobians);
+        forceCalcPerTriangle(tr, _calcJacobians, _useJvel);
     }
     // External forces
     ngl::Vec3 fgravity, airRes;
@@ -262,7 +266,7 @@ void Cloth::forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians)
     }
 }
 
-void Cloth::forceCalcPerTriangle(Triref _tr, bool _calcJacobians)
+void Cloth::forceCalcPerTriangle(Triref _tr, bool _calcJacobians, bool _useJvel)
 {
     // 1.1 - CALC U AND V
     ngl::Vec3 ru, rv, U, V;
@@ -270,44 +274,12 @@ void Cloth::forceCalcPerTriangle(Triref _tr, bool _calcJacobians)
     rv = _tr.tri.rv();
     U = (ru.m_x * m_mspts[_tr.a].pos()) + (ru.m_y * m_mspts[_tr.b].pos()) + (ru.m_z * m_mspts[_tr.c].pos());
     V = (rv.m_x * m_mspts[_tr.a].pos()) + (rv.m_y * m_mspts[_tr.b].pos()) + (rv.m_z * m_mspts[_tr.c].pos());
-    // handle near-zero values
     U = cleanNearZero(U);
     V = cleanNearZero(V);
-    // 1.2 - ACQUIRE STRAIN VALUES
-    ngl::Vec3 strain;
-    strain.m_x = 0.5f * (U.dot(U) - 1);
-    strain.m_y = 0.5f * (V.dot(V) - 1);
-    strain.m_z = U.dot(V);
-    // enforce strain uu and vv > 0, uv > offset, and handle near-zero values
-    strain = cleanNearZero(strain);
-    if(strain.m_x < 0.0f)
-    {
-        strain.m_x = 0.0f;
-    }
-    if(strain.m_y < 0.0f)
-    {
-        strain.m_y = 0.0f;
-    }
-    if(strain.m_z < m_shearOffset)
-    {
-        strain.m_z = m_shearOffset;
-    }
-    // 1.3 - ACQUIRE STRESS VALUES
-    ngl::Vec3 stress;
-    stress.m_x = m_weft(strain.m_x);
-    stress.m_y = m_warp(strain.m_y);
-    stress.m_z = m_shear(strain.m_z - m_shearOffset);
-    // enforce stress uu and vv > 0, and handle near-zero values
-    stress = cleanNearZero(stress);
-    if(stress.m_x < 0.0f)
-    {
-        stress.m_x = 0.0f;
-    }
-    if(stress.m_y < 0.0f)
-    {
-        stress.m_y = 0.0f;
-    }
-    // 1.4 - COMPUTE FORCE CONTRIBUTIONS
+    // 1.2 - ACQUIRE STRAIN/STRESS VALUES
+    auto strain = calcStrain(U, V);
+    auto stress = calcStress(strain);
+    // 1.3 - COMPUTE FORCE CONTRIBUTIONS
     ngl::Vec3 fa, fb, fc;
     auto nd = -1 * _tr.tri.surface_area();
     auto forceCont = [nd, stress, U, V] (float rui, float rvi) -> ngl::Vec3
@@ -317,62 +289,24 @@ void Cloth::forceCalcPerTriangle(Triref _tr, bool _calcJacobians)
     fa = forceCont(ru.m_x, rv.m_x);
     fb = forceCont(ru.m_y, rv.m_y);
     fc = forceCont(ru.m_z, rv.m_z);
-    // 1.5 - APPLY FORCE CONTRIBUTIONS TO TRIANGLE POINTS
+    // 1.4 - APPLY FORCE CONTRIBUTIONS TO TRIANGLE POINTS
     m_mspts[_tr.a].addForce(fa);
     m_mspts[_tr.b].addForce(fb);
     m_mspts[_tr.c].addForce(fc);
-    // 1.6 - COMPUTE JACOBIAN CONTRIBUTIONS
+    // 1.5 - COMPUTE JACOBIAN CONTRIBUTIONS
     if(_calcJacobians)
     {
-        ngl::Mat3 Jaa, Jab, Jac, Jba, Jbb, Jbc, Jca, Jcb, Jcc, UUt, VVt, UVt, VUt;
-        ngl::Vec3 stressPrime;
-        stressPrime.m_x = m_weft.prime(strain.m_x);
-        stressPrime.m_y = m_warp.prime(strain.m_y);
-        stressPrime.m_z = m_shear.prime(strain.m_z - m_shearOffset);
-        UUt = vecVecTranspose(U, U);
-        VVt = vecVecTranspose(V, V);
-        UVt = vecVecTranspose(U, V);
-        VUt = vecVecTranspose(V, U);
-        auto jacobianCont = [nd, stressPrime, stress, UUt, VVt, UVt, VUt] (float rui, float ruj, float rvi, float rvj) -> ngl::Mat3
+        computeJpos(_tr, U, V, strain, stress);
+        if(_useJvel)
         {
-            ngl::Mat3 t1, t2, t3, t4;
-            t1 = UUt * (stressPrime.m_x * ruj * rui);
-            t2 = VVt * (stressPrime.m_y * rvj * rvi);
-            t3 = ((UVt * (ruj * rvi)) + (VUt * (rvj * rui))) * stressPrime.m_z;
-            t4 = ngl::Mat3((stress.m_x * ruj * rui) + (stress.m_y * rvj * rvi) + (stress.m_z * ((ruj * rvi) + (rvj * rui))));
-            return (t1 + t2 + t3 + t4) * nd;
-        };
-        // Jji
-        Jaa = jacobianCont(ru.m_x, ru.m_x, rv.m_x, rv.m_x);
-        Jab = jacobianCont(ru.m_y, ru.m_x, rv.m_y, rv.m_x);
-        Jac = jacobianCont(ru.m_z, ru.m_x, rv.m_z, rv.m_x);
-        Jba = jacobianCont(ru.m_x, ru.m_y, rv.m_x, rv.m_y);
-        Jbb = jacobianCont(ru.m_y, ru.m_y, rv.m_y, rv.m_y);
-        Jbc = jacobianCont(ru.m_z, ru.m_y, rv.m_z, rv.m_y);
-        Jca = jacobianCont(ru.m_x, ru.m_z, rv.m_x, rv.m_z);
-        Jcb = jacobianCont(ru.m_y, ru.m_z, rv.m_y, rv.m_z);
-        Jcc = jacobianCont(ru.m_z, ru.m_z, rv.m_z, rv.m_z);
-        // 1.7 - ADD JACOBIAN CONTRIBUTIONS TO TRIANGLE POINTS
-        m_mspts[_tr.a].addJacobian(_tr.a, Jaa);
-        m_mspts[_tr.a].addJacobian(_tr.b, Jab);
-        m_mspts[_tr.a].addJacobian(_tr.c, Jac);
-        m_mspts[_tr.b].addJacobian(_tr.a, Jba);
-        m_mspts[_tr.b].addJacobian(_tr.b, Jbb);
-        m_mspts[_tr.b].addJacobian(_tr.c, Jbc);
-        m_mspts[_tr.c].addJacobian(_tr.a, Jca);
-        m_mspts[_tr.c].addJacobian(_tr.b, Jcb);
-        m_mspts[_tr.c].addJacobian(_tr.c, Jcc);
+            computeJvel(_tr, U, V);
+        }
     }
 }
 
-std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
+std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h, bool _useJvel, bool _useDamping)
 {
-    // 3.1 - PREMULTIPLY EVERY J-MATRIX BY H^2
-    for(auto &m : m_mspts)
-    {
-        m.multJacobians(_h * _h);
-    }
-    // 3.2 - SET INITIAL VALUES
+    // 3.1 - SET INITIAL VALUES
     std::vector<ngl::Vec3> r, p, vel, hforce, x, Ap, b, bfp, z;
     std::vector<ngl::Mat3> Pi, PiInv;
     float alpha, rsold, rsnew, rstest, epsilon;
@@ -394,8 +328,22 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
         vel.push_back(m.vel());
         hforce.push_back(m.forces() * _h);
     }
+
+    // set jmatrix stuff (before premultiply, for damping)
+    auto jvt = jMatrixMultOp(false, _useJvel, _useDamping, _h, vel);
+
+    // premultiply j-matrices
+    for(auto &m : m_mspts)
+    {
+        m.multJpos(_h * _h);
+        if(_useJvel)
+        {
+            m.multJvel(_h);
+        }
+    }
+
     // set the preconditioning matrix Pi (diag = 1/A diag) and its inverse
-    Pi = createPrecon();
+    Pi = createPrecon(_useJvel, _useDamping, _h);
     for(auto m : Pi)
     {
         auto minv = m;
@@ -405,7 +353,6 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
         PiInv.push_back(minv);
     }
     // determine b = hforce + h^2Jvt
-    auto jvt = jMatrixMultOp(false, vel);
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
         b[i] = hforce[i] + jvt[i];
@@ -437,12 +384,12 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
     filter(p);
     rsnew = vecVecDotOp(r, p);
     epsilon = 1e-5f;
-    size_t k = 0;
 
-    // 3.3 - CONJUGATE GRADIENT METHOD LOOP
-    while(rsnew > (epsilon * rstest))
+    // 3.2 - CONJUGATE GRADIENT METHOD LOOP
+    for(size_t k = 0; k < 1000; ++k)
+    //while(rsnew > (epsilon * rstest))
     {
-        Ap = jMatrixMultOp(true, p);
+        Ap = jMatrixMultOp(true, _useJvel, _useDamping, _h, p);
         filter(Ap);
         auto testval = vecVecDotOp(p, Ap);
         alpha = rsnew / vecVecDotOp(p, Ap);
@@ -459,7 +406,10 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h)
             p[i] = z[i] + ((rsnew/rsold) * p[i]);
         }
         filter(p);
-        ++k;
+        if(rsnew < (epsilon * rstest))
+        {
+            break;
+        }
     }
     return x;
 }
@@ -529,6 +479,181 @@ void Cloth::rk4Integrate(float _h, ngl::Vec3 _externalf)
     }
 }
 
+ngl::Vec3 Cloth::calcStrain(ngl::Vec3 _u, ngl::Vec3 _v)
+{
+    // calc strain
+    ngl::Vec3 strain;
+    strain.m_x = 0.5f * (_u.dot(_u) - 1);
+    strain.m_y = 0.5f * (_v.dot(_v) - 1);
+    strain.m_z = _u.dot(_v);
+    // enforce strain uu and vv > 0, uv > offset, and handle near-zero values
+    strain = cleanNearZero(strain);
+    if(strain.m_x < 0.0f)
+    {
+        strain.m_x = 0.0f;
+    }
+    if(strain.m_y < 0.0f)
+    {
+        strain.m_y = 0.0f;
+    }
+    if(strain.m_z < m_shearOffset)
+    {
+        strain.m_z = m_shearOffset;
+    }
+    return strain;
+}
+
+ngl::Vec3 Cloth::calcStrainPrime(ngl::Vec3 _u, ngl::Vec3 _up, ngl::Vec3 _v, ngl::Vec3 _vp)
+{
+    ngl::Vec3 strainp;
+    strainp.m_x = _u.dot(_up);
+    strainp.m_y = _v.dot(_vp);
+    strainp.m_z = _u.dot(_vp) + _v.dot(_up);
+    cleanNearZero(strainp);
+    if(strainp.m_x < 0)
+    {
+        strainp.m_x = 0;
+    }
+    if(strainp.m_y < 0)
+    {
+        strainp.m_y = 0;
+    }
+    if(strainp.m_z < m_shearOffset)
+    {
+        strainp.m_z = m_shearOffset;
+    }
+    return strainp;
+}
+
+ngl::Vec3 Cloth::calcStress(ngl::Vec3 _strain)
+{
+    // calc stress
+    ngl::Vec3 stress;
+    stress.m_x = m_weft(_strain.m_x);
+    stress.m_y = m_warp(_strain.m_y);
+    stress.m_z = m_shear(_strain.m_z - m_shearOffset);
+    // enforce stress uu and vv > 0, and handle near-zero values
+    stress = cleanNearZero(stress);
+    if(stress.m_x < 0.0f)
+    {
+        stress.m_x = 0.0f;
+    }
+    if(stress.m_y < 0.0f)
+    {
+        stress.m_y = 0.0f;
+    }
+    return stress;
+}
+
+void Cloth::computeJpos(Triref _tr, ngl::Vec3 _u, ngl::Vec3 _v, ngl::Vec3 _strain, ngl::Vec3 _stress)
+{
+    // prepare initial values
+    ngl::Mat3 Jaa, Jab, Jac, Jba, Jbb, Jbc, Jca, Jcb, Jcc, UUt, VVt, UVt, VUt;
+    auto nd = -1 * _tr.tri.surface_area();
+    ngl::Vec3 ru, rv, stressPrime;
+    ru = _tr.tri.ru();
+    rv = _tr.tri.rv();
+    UUt = vecVecTranspose(_u, _u);
+    VVt = vecVecTranspose(_v, _v);
+    UVt = vecVecTranspose(_u, _v);
+    VUt = vecVecTranspose(_v, _u);
+    // calculate stressprime
+    stressPrime.m_x = m_weft.prime(_strain.m_x);
+    stressPrime.m_y = m_warp.prime(_strain.m_y);
+    stressPrime.m_z = m_shear.prime(_strain.m_z - m_shearOffset);
+    cleanNearZero(stressPrime);
+    // lambda for jacobian calculations
+    auto jposCont = [nd, stressPrime, _stress, UUt, VVt, UVt, VUt] (float rui, float ruj, float rvi, float rvj) -> ngl::Mat3
+    {
+        ngl::Mat3 t1, t2, t3, t4;
+        t1 = UUt * (stressPrime.m_x * ruj * rui);
+        t2 = VVt * (stressPrime.m_y * rvj * rvi);
+        t3 = ((UVt * (ruj * rvi)) + (VUt * (rvj * rui))) * stressPrime.m_z;
+        t4 = ngl::Mat3((_stress.m_x * ruj * rui) + (_stress.m_y * rvj * rvi) + (_stress.m_z * ((ruj * rvi) + (rvj * rui))));
+        return (t1 + t2 + t3 + t4) * nd;
+    };
+    // calculate Jji
+    Jaa = jposCont(ru.m_x, ru.m_x, rv.m_x, rv.m_x);
+    Jab = jposCont(ru.m_y, ru.m_x, rv.m_y, rv.m_x);
+    Jac = jposCont(ru.m_z, ru.m_x, rv.m_z, rv.m_x);
+    Jba = jposCont(ru.m_x, ru.m_y, rv.m_x, rv.m_y);
+    Jbb = jposCont(ru.m_y, ru.m_y, rv.m_y, rv.m_y);
+    Jbc = jposCont(ru.m_z, ru.m_y, rv.m_z, rv.m_y);
+    Jca = jposCont(ru.m_x, ru.m_z, rv.m_x, rv.m_z);
+    Jcb = jposCont(ru.m_y, ru.m_z, rv.m_y, rv.m_z);
+    Jcc = jposCont(ru.m_z, ru.m_z, rv.m_z, rv.m_z);
+    // add position jacobian contributions to triangle points
+    m_mspts[_tr.a].addJpos(_tr.a, Jaa);
+    m_mspts[_tr.a].addJpos(_tr.b, Jab);
+    m_mspts[_tr.a].addJpos(_tr.c, Jac);
+    m_mspts[_tr.b].addJpos(_tr.a, Jba);
+    m_mspts[_tr.b].addJpos(_tr.b, Jbb);
+    m_mspts[_tr.b].addJpos(_tr.c, Jbc);
+    m_mspts[_tr.c].addJpos(_tr.a, Jca);
+    m_mspts[_tr.c].addJpos(_tr.b, Jcb);
+    m_mspts[_tr.c].addJpos(_tr.c, Jcc);
+}
+
+void Cloth::computeJvel(Triref _tr, ngl::Vec3 _u, ngl::Vec3 _v)
+{
+    // flag for debug
+    if((_tr.a == 0) || (_tr.b == 0) || (_tr.c == 0))
+    {
+        std::cout<<"flag/n";
+    }
+    // prepare initial values
+    ngl::Mat3 Jaa, Jab, Jac, Jba, Jbb, Jbc, Jca, Jcb, Jcc, UUt, VVt, UVt, VUt;
+    ngl::Vec3 ru, rv, Up, Vp, strainp, stressp;
+    auto nd = -1 * _tr.tri.surface_area();
+    UUt = vecVecTranspose(_u, _u);
+    VVt = vecVecTranspose(_v, _v);
+    UVt = vecVecTranspose(_u, _v);
+    VUt = vecVecTranspose(_v, _u);
+    ru = _tr.tri.ru();
+    rv = _tr.tri.rv();
+    // compute Uprime and Vprime
+    Up = (ru.m_x * m_mspts[_tr.a].vel()) + (ru.m_y * m_mspts[_tr.b].vel()) + (ru.m_z * m_mspts[_tr.c].vel());
+    Vp = (rv.m_x * m_mspts[_tr.a].vel()) + (rv.m_y * m_mspts[_tr.b].vel()) + (rv.m_z * m_mspts[_tr.c].vel());
+    cleanNearZero(Up);
+    cleanNearZero(Vp);
+    // compute strainprime
+    strainp = calcStrainPrime(_u, Up, _v, Vp);
+    // compute stressprime
+    stressp.m_x = m_weft.prime(strainp.m_x);
+    stressp.m_y = m_warp.prime(strainp.m_y);
+    stressp.m_z = m_shear(strainp.m_z - m_shearOffset);
+    cleanNearZero(stressp);
+    // lambda for jacobian calculations
+    auto jvelCont = [nd, stressp, UUt, VVt, UVt, VUt] (float rui, float ruj, float rvi, float rvj) -> ngl::Mat3
+    {
+        ngl::Mat3 t1, t2, t3;
+        t1 = UUt * (stressp.m_x * ruj * rui);
+        t2 = VVt * (stressp.m_y * rvj * rvi);
+        t3 = ((UVt * (ruj * rvi)) + (VUt * (rvj * rui))) * stressp.m_z;
+        return (t1 + t2 + t3) * nd;
+    };
+    // calculate Jji
+    Jaa = jvelCont(ru.m_x, ru.m_x, rv.m_x, rv.m_x);
+    Jab = jvelCont(ru.m_y, ru.m_x, rv.m_y, rv.m_x);
+    Jac = jvelCont(ru.m_z, ru.m_x, rv.m_z, rv.m_x);
+    Jba = jvelCont(ru.m_x, ru.m_y, rv.m_x, rv.m_y);
+    Jbb = jvelCont(ru.m_y, ru.m_y, rv.m_y, rv.m_y);
+    Jbc = jvelCont(ru.m_z, ru.m_y, rv.m_z, rv.m_y);
+    Jca = jvelCont(ru.m_x, ru.m_z, rv.m_x, rv.m_z);
+    Jcb = jvelCont(ru.m_y, ru.m_z, rv.m_y, rv.m_z);
+    Jcc = jvelCont(ru.m_z, ru.m_z, rv.m_z, rv.m_z);
+    // add velocity jacobian contributions to triangle points
+    m_mspts[_tr.a].addJvel(_tr.a, Jaa);
+    m_mspts[_tr.a].addJvel(_tr.b, Jab);
+    m_mspts[_tr.a].addJvel(_tr.c, Jac);
+    m_mspts[_tr.b].addJvel(_tr.a, Jba);
+    m_mspts[_tr.b].addJvel(_tr.b, Jbb);
+    m_mspts[_tr.b].addJvel(_tr.c, Jbc);
+    m_mspts[_tr.c].addJvel(_tr.a, Jca);
+    m_mspts[_tr.c].addJvel(_tr.b, Jcb);
+    m_mspts[_tr.c].addJvel(_tr.c, Jcc);
+}
+
 ngl::Mat3 Cloth::vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b)
 {
     ngl::Mat3 ret;
@@ -544,7 +669,7 @@ ngl::Mat3 Cloth::vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b)
     return ret;
 }
 
-std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec)
+std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, const bool _useJvel, const bool _useDamping, float _h, std::vector<ngl::Vec3> _vec)
 {
     std::vector<ngl::Vec3> nvec;
     nvec.resize(_vec.size());
@@ -558,7 +683,12 @@ std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, std::vector<ngl::Ve
             vecPass[k] = _vec[k];
         }
         // pass them into the masspoint for the vector multiplication
-        nvec[i] = m_mspts[i].jacobianVectorMult(_isA, vecPass);
+        nvec[i] = m_mspts[i].jacobianVectorMult(_isA, _useJvel, _useDamping, vecPass, _h);
+        // mult final result by h^2 if we're doing the Jvt operation
+        if(!_isA)
+        {
+            nvec[i] *= (_h * _h);
+        }
     }
     return nvec;
 }
@@ -590,17 +720,38 @@ ngl::Vec3 Cloth::cleanNearZero(ngl::Vec3 io_a)
     return io_a;
 }
 
-std::vector<ngl::Mat3> Cloth::createPrecon()
+std::vector<ngl::Mat3> Cloth::createPrecon(bool _useJvel, bool _useDamping, float _h)
 {
     std::vector<ngl::Mat3> precon;
     precon.resize(m_mspts.size());
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
-        auto diag = m_mspts[i].getJacobianDiag();
+        float prem0, prem1, prem2;
+        auto posdiag = m_mspts[i].getJposDiag();
         auto mass = m_mspts[i].mass();
-        precon[i].m_00 = 1/(mass - diag.m_x);
-        precon[i].m_11 = 1/(mass - diag.m_y);
-        precon[i].m_22 = 1/(mass - diag.m_z);
+        if(_useJvel)
+        {
+            auto veldiag = m_mspts[i].getJvelDiag();
+            prem0 = mass - veldiag.m_x - posdiag.m_x;
+            prem1 = mass - veldiag.m_y - posdiag.m_y;
+            prem2 = mass - veldiag.m_z - posdiag.m_z;
+        }
+        else
+        {
+            prem0 = mass - posdiag.m_x;
+            prem1 = mass - posdiag.m_y;
+            prem2 = mass - posdiag.m_z;
+        }
+        if(_useDamping)
+        {
+            auto dampingVal = (m_mspts[i].numJacobians() - 1) * _h * m_mspts[i].dampingCoefficient();
+            prem0 += dampingVal;
+            prem1 += dampingVal;
+            prem2 += dampingVal;
+        }
+        precon[i].m_00 = 1/prem0;
+        precon[i].m_11 = 1/prem1;
+        precon[i].m_22 = 1/prem2;
     }
     return precon;
 }

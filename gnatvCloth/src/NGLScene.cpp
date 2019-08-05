@@ -15,7 +15,8 @@ NGLScene::NGLScene()
   setTitle("GNATV Cloth Sim");
   // initialize cloth
   //std::vector<size_t> corners = {0, 29, 870, 899};
-  std::vector<size_t> corners = {0, 9, 90, 99};
+  //std::vector<size_t> corners = {0, 9, 90, 99};
+  std::vector<size_t> corners = {0, 1, 2, 3};
   m_cloth = Cloth(WOOL);
   // lambda to get the cloth points from world space into 2D parametric space
   auto toParam = [](ngl::Vec3 _v) -> ngl::Vec2
@@ -25,9 +26,9 @@ NGLScene::NGLScene()
       n.m_y = _v.m_z;
       return n;
   };
-  m_cloth.init("obj/clothuvtest.obj", toParam, corners);
-  //std::vector<bool> fixedCorners = {1, 1, 1, 1};
-  //m_cloth.fixCorners(fixedCorners);
+  m_cloth.init("obj/clothuvtest.obj", toParam, corners, 15.0f);
+  std::vector<bool> fixedCorners = {1, 1, 1, 1};
+  m_cloth.fixCorners(fixedCorners);
 }
 
 
@@ -109,7 +110,7 @@ void NGLScene::initializeGL()
   shader->setUniform("lightPos",m_lightPos.toVec3());
   shader->setUniform("colour1",0.9f,0.9f,0.9f,1.0f);
   shader->setUniform("colour2",0.6f,0.6f,0.6f,1.0f);
-  shader->setUniform("checkSize",10.0f);
+  shader->setUniform("checkSize",15.0f);
 
   //make a simple vao for the cloth triangles
   m_clothVAO = ngl::VAOFactory::createVAO(ngl::simpleVAO, GL_TRIANGLES);

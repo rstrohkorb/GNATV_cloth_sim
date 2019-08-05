@@ -27,7 +27,7 @@ public:
 
     // Initializers
     void init(std::string _filename, std::function<ngl::Vec2(ngl::Vec3)> _toParam,
-              std::vector<size_t> _corners);                // inits to obj file
+              std::vector<size_t> _corners, float _dampingCoefficient);                // inits to obj file
 
     // Getters/Setters
     size_t numMasses() const { return m_mspts.size(); }
@@ -71,15 +71,20 @@ private:
     // Helper Functions
     void readObj(std::string _filename);
     void nullForces();
-    void forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians);
-    void forceCalcPerTriangle(Triref _tr, bool _calcJacobians);
-    std::vector<ngl::Vec3> conjugateGradient(float _h);
+    void forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians, bool _useJvel = false);
+    void forceCalcPerTriangle(Triref _tr, bool _calcJacobians, bool _useJvel);
+    std::vector<ngl::Vec3> conjugateGradient(float _h, bool _useJvel, bool _useDamping);
     void rk4Integrate(float _h, ngl::Vec3 _externalf);
+    ngl::Vec3 calcStrain(ngl::Vec3 _u, ngl::Vec3 _v);
+    ngl::Vec3 calcStrainPrime(ngl::Vec3 _u, ngl::Vec3 _up, ngl::Vec3 _v, ngl::Vec3 _vp);
+    ngl::Vec3 calcStress(ngl::Vec3 _strain);
+    void computeJpos(Triref _tr, ngl::Vec3 _u, ngl::Vec3 _v, ngl::Vec3 _strain, ngl::Vec3 _stress);
+    void computeJvel(Triref _tr, ngl::Vec3 _u, ngl::Vec3 _v);
     ngl::Mat3 vecVecTranspose(ngl::Vec3 _a, ngl::Vec3 _b);
-    std::vector<ngl::Vec3> jMatrixMultOp(const bool _isA, std::vector<ngl::Vec3> _vec);
+    std::vector<ngl::Vec3> jMatrixMultOp(const bool _isA, const bool _useJvel, const bool _useDamping, float _h, std::vector<ngl::Vec3> _vec);
     float vecVecDotOp(std::vector<ngl::Vec3> _a, std::vector<ngl::Vec3> _b);
     ngl::Vec3 cleanNearZero(ngl::Vec3 io_a);
-    std::vector<ngl::Mat3> createPrecon();
+    std::vector<ngl::Mat3> createPrecon(bool _useJvel, bool _useDamping, float _h);
     void filter(std::vector<ngl::Vec3> &io_vec);
 };
 
