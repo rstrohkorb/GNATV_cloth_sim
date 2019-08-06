@@ -65,29 +65,7 @@ void Cloth::init(std::string _filename, std::function<ngl::Vec2(ngl::Vec3)> _toP
 void Cloth::render(std::vector<float> &o_vertexData)
 {
     // determine vertex normals
-    std::vector<ngl::Vec3> vNorms;
-    vNorms.resize(m_mspts.size());
-    for(auto tr : m_triangles)
-    {
-        ngl::Vec3 triNormal, edge1, edge2;
-        edge1 = tr.tri.v2() - tr.tri.v1();
-        edge2 = tr.tri.v3() - tr.tri.v1();
-        triNormal = edge1.cross(edge2);
-        if(triNormal != ngl::Vec3(0.0f))
-        {
-            triNormal.normalize();
-        }
-        vNorms[tr.a] += triNormal;
-        vNorms[tr.b] += triNormal;
-        vNorms[tr.c] += triNormal;
-    }
-    for(auto &vn : vNorms)
-    {
-        if(vn != ngl::Vec3(0.0f))
-        {
-            vn.normalize();
-        }
-    }
+    auto vNorms = calcNormals();
 
     // lambda for adding the data
     auto listAdd = [&o_vertexData] (ngl::Vec3 vert, ngl::Vec3 norm, ngl::Vec2 uv) -> void
@@ -113,6 +91,52 @@ void Cloth::render(std::vector<float> &o_vertexData)
         listAdd(tr.tri.v2(), vNorms[tr.b], tr.tri.v2UV());
         listAdd(tr.tri.v3(), vNorms[tr.c], tr.tri.v3UV());
     }
+}
+
+void Cloth::writeToObj(std::string _filename)
+{
+    // create file
+    std::ofstream obj;
+    obj.open(_filename);
+    obj << "o Cloth\n";
+    // write out vertex data
+    for(auto m : m_mspts)
+    {
+        obj << "v ";
+        obj << m.pos().m_x << " " << m.pos().m_y << " " << m.pos().m_z <<'\n';
+    }
+    // collect UV coords
+    std::vector<ngl::Vec2> uvs;
+    uvs.resize(m_mspts.size());
+    for(auto tr : m_triangles)
+    {
+        uvs[tr.a] = tr.tri.v1UV();
+        uvs[tr.b] = tr.tri.v2UV();
+        uvs[tr.c] = tr.tri.v3UV();
+    }
+    // write out UV coords
+    for(auto uv : uvs)
+    {
+        obj << "vt " << uv.m_x << " " << uv.m_y << '\n';
+    }
+    // collect vertex normals
+    auto vNorms = calcNormals();
+    // write out vertex normals
+    for(auto n : vNorms)
+    {
+        obj << "vn ";
+        obj << n.m_x << " " << n.m_y << " " << n.m_z << '\n';
+    }
+    // write out triangles
+    for(auto tr : m_triangles)
+    {
+        obj << "f ";
+        obj << (tr.a + 1) << "/" << (tr.a + 1) << "/" << (tr.a + 1) << " ";
+        obj << (tr.b + 1) << "/" << (tr.b + 1) << "/" << (tr.b + 1) << " ";
+        obj << (tr.c + 1) << "/" << (tr.c + 1) << "/" << (tr.c + 1) << '\n';
+    }
+    // close file
+    obj.close();
 }
 
 void Cloth::update(float _h, ngl::Vec3 _externalf)
@@ -148,7 +172,10 @@ void Cloth::fixCorners(std::vector<bool> _isPtFixed)
         // set the point as fixed
         m_mspts[m_corners[i]].setFixed(_isPtFixed[i]);
         // update the filter matrix
-        m_filter[m_corners[i]] = ngl::Mat3(0.0f);
+        if(_isPtFixed[i])
+        {
+            m_filter[m_corners[i]] = ngl::Mat3(0.0f);
+        }
     }
 }
 
@@ -262,7 +289,7 @@ void Cloth::forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians, bool 
             airRes.normalize();
             airRes *= -1.0f * m.vel().lengthSquared();
         }
-        m.addForce((fgravity * m.mass()));// + airRes + _externalf);
+        m.addForce((fgravity * m.mass()) + airRes + _externalf);
     }
 }
 
@@ -386,7 +413,7 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h, bool _useJvel, bool _u
     epsilon = 1e-5f;
 
     // 3.2 - CONJUGATE GRADIENT METHOD LOOP
-    for(size_t k = 0; k < 1000; ++k)
+    for(size_t k = 0; k < m_mspts.size(); ++k)
     //while(rsnew > (epsilon * rstest))
     {
         Ap = jMatrixMultOp(true, _useJvel, _useDamping, _h, p);
@@ -718,6 +745,36 @@ ngl::Vec3 Cloth::cleanNearZero(ngl::Vec3 io_a)
         io_a.m_z = 0.0f;
     }
     return io_a;
+}
+
+std::vector<ngl::Vec3> Cloth::calcNormals()
+{
+    std::vector<ngl::Vec3> vNorms;
+    vNorms.resize(m_mspts.size());
+    // calculate triangle norms, accumulate for each masspoint
+    for(auto tr : m_triangles)
+    {
+        ngl::Vec3 triNormal, edge1, edge2;
+        edge1 = tr.tri.v2() - tr.tri.v1();
+        edge2 = tr.tri.v3() - tr.tri.v1();
+        triNormal = edge1.cross(edge2);
+        if(triNormal != ngl::Vec3(0.0f))
+        {
+            triNormal.normalize();
+        }
+        vNorms[tr.a] += triNormal;
+        vNorms[tr.b] += triNormal;
+        vNorms[tr.c] += triNormal;
+    }
+    // normalize to create the final normals
+    for(auto &vn : vNorms)
+    {
+        if(vn != ngl::Vec3(0.0f))
+        {
+            vn.normalize();
+        }
+    }
+    return vNorms;
 }
 
 std::vector<ngl::Mat3> Cloth::createPrecon(bool _useJvel, bool _useDamping, float _h)

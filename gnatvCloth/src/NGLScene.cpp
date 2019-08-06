@@ -26,8 +26,8 @@ NGLScene::NGLScene()
       n.m_y = _v.m_z;
       return n;
   };
-  m_cloth.init("obj/clothuvtest.obj", toParam, corners, 15.0f);
-  std::vector<bool> fixedCorners = {1, 1, 1, 1};
+  m_cloth.init("obj/clothLowResXZ.obj", toParam, corners, 9.0f);
+  std::vector<bool> fixedCorners = {0, 0, 1, 1};
   m_cloth.fixCorners(fixedCorners);
 }
 
@@ -43,7 +43,7 @@ void NGLScene::timerEvent(QTimerEvent *_event)
 //    {
 //        m_cloth.update(0.001f, ngl::Vec3(0.0f));
 //    }
-    m_cloth.update(0.005f, ngl::Vec3(0.0f));
+    m_cloth.update(0.01f, ngl::Vec3(0.0f));
     update();
 }
 
@@ -69,39 +69,14 @@ void NGLScene::initializeGL()
   // enable multisampling for smoother drawing
   glEnable(GL_MULTISAMPLE);
 
-  // load shaders
-  ngl::ShaderLib *shader = ngl::ShaderLib::instance();
-  shader->loadShader("ColorShader", "shaders/ColorVertex.glsl",
-                   "shaders/ColorFragment.glsl");
-  shader->createShaderProgram("PBR");
-  shader->attachShader("PBRVertex", ngl::ShaderType::VERTEX);
-  shader->attachShader("PBRFragment", ngl::ShaderType::FRAGMENT);
-  shader->loadShaderSource("PBRVertex", "shaders/PBRVertex.glsl");
-  shader->loadShaderSource("PBRFragment", "shaders/PBRFragment.glsl");
-  shader->compileShader("PBRVertex");
-  shader->compileShader("PBRFragment");
-  shader->attachShaderToProgram("PBR", "PBRVertex");
-  shader->attachShaderToProgram("PBR", "PBRFragment");
-
-  // set up PBR shader to accept initial vals
-  shader->linkProgramObject("PBR");
-  ( *shader )["PBR"]->use();
   // set the camera
   ngl::Vec3 from = {0.0f, 20.0f, 20.0f};
   m_view = ngl::lookAt(from, ngl::Vec3::zero(), ngl::Vec3::up());
-  // give camera to shader
-  shader->setUniform("camPos", from);
   // add a light from the camera pos
   m_lightPos.set(from.m_x, from.m_y, from.m_z, 1.0f);
-  // set uniform values in the PBR shader that can remain static
-  shader->setUniform("lightPosition",m_lightPos.toVec3());
-  shader->setUniform("lightColor",400.0f,400.0f,400.0f);
-  shader->setUniform("exposure",2.2f);
-  shader->setUniform("albedo",0.950f, 0.71f, 0.29f);
 
-  shader->setUniform("metallic",0.01f);
-  shader->setUniform("roughness",0.78f);
-  shader->setUniform("ao",0.2f);
+  // load shader instance
+  ngl::ShaderLib *shader = ngl::ShaderLib::instance();
 
   // ngl checker shader
   shader->use(ngl::nglCheckerShader);
@@ -141,7 +116,6 @@ void NGLScene::paintGL()
   m_clothVAO->setVertexAttributePointer(2, 2, GL_FLOAT, 8*sizeof(float), 6);
   m_clothVAO->setNumIndices((tri.size()/8)*3);
 
-  //loadMatrixToPBRShader(mouseRotation);
   loadMatrixToCheckerShader(mouseRotation);
 
   m_clothVAO->draw();
@@ -152,45 +126,12 @@ void NGLScene::loadMatrixToCheckerShader(const ngl::Mat4 &_tx)
 {
     ngl::ShaderLib* shader = ngl::ShaderLib::instance();
     shader->use(ngl::nglCheckerShader);
-//    ngl::Mat4 tx;
-//    tx.translate(0.0f,-0.45f,0.0f);
     ngl::Mat4 MVP= m_project * m_view * _tx;
     ngl::Mat3 normalMatrix= m_view * _tx;
     normalMatrix.inverse().transpose();
     shader->setUniform("MVP",MVP);
     shader->setUniform("normalMatrix",normalMatrix);
 }
-
-void NGLScene::loadMatrixToPBRShader(const ngl::Mat4 &_tx)
-{
-    ngl::ShaderLib* shader = ngl::ShaderLib::instance();
-    shader->use("PBR");
-    // transform struct to match what's in shader
-    struct transform
-    {
-      ngl::Mat4 MVP;
-      ngl::Mat4 normalMatrix;
-      ngl::Mat4 M;
-    };
-    // set transform vals
-    transform t;
-    t.M=m_view*_tx;
-    t.MVP=m_project*t.M;
-    t.normalMatrix=t.M;
-    t.normalMatrix.inverse().transpose();
-    // set uniforms
-    shader->setUniformBuffer("TransformUBO",sizeof(transform),&t.MVP.m_00);
-}
-
-void NGLScene::loadMatrixToColorShader(const ngl::Mat4 &_tx, const ngl::Vec4 &_color)
-{
-    ngl::ShaderLib *shader = ngl::ShaderLib::instance();
-    shader->use("ColorShader");
-    shader->setUniform("MVP", m_project * m_view * _tx);
-    shader->setUniform("vertColor", _color);
-}
-
-//----------------------------------------------------------------------------------------------------------------------
 
 void NGLScene::keyPressEvent(QKeyEvent *_event)
 {

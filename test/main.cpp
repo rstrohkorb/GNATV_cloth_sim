@@ -138,11 +138,11 @@ TEST(MassPoint,jacobianVectorMult)
     auto resAnoVelNodamp = m.jacobianVectorMult(true, false, false, testmap);
     auto resNotAdamp = m.jacobianVectorMult(false, false, true, testmap);
     auto resNotANodamp = m.jacobianVectorMult(false, false, false, testmap);
-    EXPECT_TRUE(resAveldamp == ngl::Vec3(-11.5f));
+    EXPECT_TRUE(resAveldamp == ngl::Vec3(-13.0f));
     EXPECT_TRUE(resAvelNodamp == ngl::Vec3(-14.0f));
-    EXPECT_TRUE(resAnoVeldamp == ngl::Vec3(-1.5f));
+    EXPECT_TRUE(resAnoVeldamp == ngl::Vec3(-3.0f));
     EXPECT_TRUE(resAnoVelNodamp == ngl::Vec3(-4.0f));
-    EXPECT_TRUE(resNotAdamp == ngl::Vec3(7.5f));
+    EXPECT_TRUE(resNotAdamp == ngl::Vec3(6.0f));
     EXPECT_TRUE(resNotANodamp == ngl::Vec3(5.0f));
 }
 
@@ -152,7 +152,7 @@ TEST(Triangle,defaultctor)
     EXPECT_TRUE(t.v1() == ngl::Vec3(0.0f));
     EXPECT_TRUE(t.v2() == ngl::Vec3(1.0f, 0.0f, 0.0f));
     EXPECT_TRUE(t.v3() == ngl::Vec3(0.0f, 1.0f, 0.0f));
-    EXPECT_FLOAT_EQ(t.surface_area(), 0.0f);
+    EXPECT_FLOAT_EQ(t.surface_area(), 0.5f);
     EXPECT_TRUE(t.ru() == ngl::Vec3(1.0f));
     EXPECT_TRUE(t.rv() == ngl::Vec3(1.0f));
     EXPECT_TRUE(t.v1UV() == ngl::Vec2(0.0f, 0.0f));
@@ -220,10 +220,10 @@ TEST(Cloth,init)
         return n;
     };
     Cloth c(WOOL);
-    c.init("../gnatvCloth/obj/clothXZUV.obj", toParam, corners, 2.0f);
+    c.init("../gnatvCloth/obj/clothLowResXZ.obj", toParam, corners, 2.0f);
     EXPECT_TRUE(c.numMasses() == 289);
     EXPECT_TRUE(c.numTriangles() == 512);
-    EXPECT_FLOAT_EQ(c.firstMass(), 0.017215004f);
+    EXPECT_FLOAT_EQ(c.firstMass(), 0.009765611f);
     EXPECT_TRUE(corners == c.corners());
 }
 
@@ -238,7 +238,7 @@ TEST(Cloth,fixCorners)
         return n;
     };
     Cloth c(WOOL);
-    c.init("../gnatvCloth/obj/clothXZUV.obj", toParam, corners, 2.0f);
+    c.init("../gnatvCloth/obj/clothLowResXZ.obj", toParam, corners, 2.0f);
     std::vector<bool> c1, c2, c3, c4;
     c1 = {false, false, true, true};
     c2 = {true, false, true, false};

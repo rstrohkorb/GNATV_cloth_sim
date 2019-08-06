@@ -1,9 +1,22 @@
+/**
+ * @file Materials.h
+ * @brief a header for storing weft, warp, and shear cloth data
+ * @author Rachel Strohkorb
+ *
+ * This data is inteded for use with boost's cubic b-spline interpolator. The data is
+ * derived from force/displacement tests performed on an actual cloth sample. Any other
+ * data added to this file needs the following:
+ *      1. Mass of one square meter of the cloth in kg/m^2
+ *      2. Weft, warp, and shear data sets measuring stress, taken at equal strain intervals
+ *      3. Starting points of the data sets
+*/
+
 #ifndef MATERIALS_H_
 #define MATERIALS_H_
 
 #include <vector>
 
-static float wool_mass = 0.15f;
+static float wool_mass = 0.15f; // in kg per square meter
 
 static float wool_weftStart = 0.0f;
 static float wool_warpStart = 0.0f;

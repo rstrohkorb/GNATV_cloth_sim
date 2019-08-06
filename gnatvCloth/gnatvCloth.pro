@@ -16,8 +16,6 @@ HEADERS+= include/Cloth.h \
           include/WindowParams.h \
           include/Materials.h
 
-OTHER_FILES+= shaders/*.glsl
-
 INCLUDEPATH+= include
 
 cache()
