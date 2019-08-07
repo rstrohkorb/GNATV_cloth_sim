@@ -16,6 +16,8 @@
 
 #include <vector>
 
+// WOOL
+
 static float wool_mass = 0.15f; // in kg per square meter
 
 static float wool_weftStart = 0.0f;
@@ -51,6 +53,35 @@ static std::vector<float> wool_shearData = {
     0.999f, 2.998f, 4.997f, 9.496f, 12.995f,
     16.994f, 20.493f, 24.992f, 28.991f, 32.99f,
     37.989f, 44.488f, 50.987f, 59.986f
+};
+
+// JUTE
+
+static float jute_mass = 0.42f;
+
+static float jute_weftStart = 0.0f;
+static float jute_warpStart = 0.0f;
+static float jute_shearStart = -0.12f;
+
+static float jute_weftStep = 0.008f;
+static float jute_warpStep = 0.004f;
+static float jute_shearStep = 0.02f;
+
+static std::vector<float> jute_weftData = {
+    0.0f, 650000.0f, 1240000.0f, 2020000.0f, 2700000.0f, 3930000.0f,
+    5340000.0f, 8060000.0f, 11540000.0f, 18950000.0f, 28700000.0f,
+    33650000.0f, 38480000.0f
+};
+
+static std::vector<float> jute_warpData = {
+    0.0f, 1300000.0f, 2100000.0f, 2960000.0f, 4300000.0f, 10230000.0f,
+    19020000.0f, 28530000.0f, 43860000.0f, 56140000.0f, 69690000.0f,
+    78560000.0f, 83430000.0f
+};
+
+static std::vector<float> jute_shearData = {
+    -36.75f, -22.4f, -15.73f, -11.6f, -6.7f, -3.43f, 0.0f, 3.43f,
+    6.7f, 11.6f, 15.73f, 22.4f, 36.75f
 };
 
 #endif

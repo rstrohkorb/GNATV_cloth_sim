@@ -1,7 +1,6 @@
 #include <QMouseEvent>
 #include <QGuiApplication>
 
-#include "NGLScene.h"
 #include <ngl/NGLInit.h>
 #include <ngl/ShaderLib.h>
 #include <ngl/SimpleVAO.h>
@@ -9,13 +8,11 @@
 #include <ngl/Transformation.h>
 #include <iostream>
 
-NGLScene::NGLScene()
+#include "NGLScene.h"
+
+NGLScene::NGLScene(QWidget *_parent) : QOpenGLWidget( _parent )
 {
-  // re-size the widget to that of the parent (in this case the GLFrame passed in on construction)
-  setTitle("GNATV Cloth Sim");
   // initialize cloth
-  //std::vector<size_t> corners = {0, 29, 870, 899};
-  //std::vector<size_t> corners = {0, 9, 90, 99};
   std::vector<size_t> corners = {0, 1, 2, 3};
   m_cloth = Cloth(WOOL);
   // lambda to get the cloth points from world space into 2D parametric space
@@ -27,8 +24,8 @@ NGLScene::NGLScene()
       return n;
   };
   m_cloth.init("obj/clothLowResXZ.obj", toParam, corners, 9.0f);
-  std::vector<bool> fixedCorners = {0, 0, 1, 1};
-  m_cloth.fixCorners(fixedCorners);
+  std::vector<bool> fixedCorners = {1, 1, 1, 1};
+  //m_cloth.fixCorners(fixedCorners);
 }
 
 
@@ -96,6 +93,15 @@ void NGLScene::paintGL()
   // clear the screen and depth buffer
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glViewport(0,0,m_win.width,m_win.height);
+  // wireframe
+  if(m_wireframe)
+  {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  }
+  else
+  {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
   // determine mouse rotation
   ngl::Mat4 rotx;
   ngl::Mat4 roty;
@@ -157,5 +163,11 @@ void NGLScene::keyPressEvent(QKeyEvent *_event)
   }
   // finally update the GLWindow and re-draw
 
+    update();
+}
+
+void NGLScene::toggleWireframe(bool _mode)
+{
+    m_wireframe=_mode;
     update();
 }

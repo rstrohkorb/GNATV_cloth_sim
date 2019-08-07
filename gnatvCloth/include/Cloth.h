@@ -17,7 +17,7 @@
  * @enum material_type
  * @brief different types of cloth data available for use in Materials.h
 */
-enum material_type { WOOL };
+enum material_type { WOOL, JUTE };
 
 /**
  * @class Cloth

@@ -17,8 +17,11 @@
 
 #include "WindowParams.h"
 #include "Cloth.h"
+
+#include <QEvent>
+#include <QResizeEvent>
 // this must be included after NGL includes else we get a clash with gl libs
-#include <QOpenGLWindow>
+#include <QOpenGLWidget>
 
 /**
  * @class NGLScene
@@ -26,18 +29,19 @@
  * put in this file
 */
 
-class NGLScene : public QOpenGLWindow
+class NGLScene : public QOpenGLWidget
 {
-  public:
+Q_OBJECT
+public:
     /**
      * @brief ctor for our NGL drawing class
      * @param [in] parent the parent window to the class
     */
-    NGLScene();    
+    NGLScene(QWidget *_parent);
     /**
      * @brief dtor must close down ngl and release OpenGL resources
     */
-    ~NGLScene() override;    
+    ~NGLScene() override;
     /**
      * @brief events that run every clock cycle once timer starts
     */
@@ -55,6 +59,12 @@ class NGLScene : public QOpenGLWindow
      * @brief this is called everytime we resize the window
     */
     void resizeGL(int _w, int _h) override;
+
+public slots:
+    /**
+     * @brief a slot to toggle wireframe mode
+    */
+    void toggleWireframe(bool _mode);
 
 private:
     /**
@@ -100,6 +110,8 @@ private:
     ngl::Vec4 m_lightPos;           /**< Light position in world space */
 
     std::unique_ptr<ngl::AbstractVAO> m_clothVAO;   /**< VAO for the cloth triangles */
+
+    bool m_wireframe = false;       /**< Whether or not the cloth is visualized in wireframe */
 };
 
 

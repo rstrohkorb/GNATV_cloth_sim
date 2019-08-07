@@ -24,6 +24,18 @@ Cloth::Cloth(material_type _mt)
         m_shearOffset = wool_shearStart;
     }
     break;
+    case JUTE:
+    {
+        m_mass = jute_mass;
+        m_weft = boost::math::cubic_b_spline<float>(jute_weftData.begin(), jute_weftData.end(),
+                                                    jute_weftStart, jute_weftStep, 0.0f);
+        m_warp = boost::math::cubic_b_spline<float>(jute_warpData.begin(), jute_warpData.end(),
+                                                    jute_warpStart, jute_warpStep, 0.0f);
+        m_shear = boost::math::cubic_b_spline<float>(jute_shearData.begin(), jute_shearData.end(),
+                                                     0.0f, jute_shearStep);
+        m_shearOffset = jute_shearStart;
+    }
+    break;
     }
 }
 
