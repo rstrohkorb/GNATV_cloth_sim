@@ -3,6 +3,7 @@
 #include "MassPoint.h"
 #include "Triangle.h"
 #include "Cloth.h"
+#include "ClothInterface.h"
 
 int main(int argc, char **argv)
 {
@@ -166,7 +167,7 @@ TEST(Triangle,userctor)
     EXPECT_TRUE(t.v1() == ngl::Vec3(2.0f));
     EXPECT_TRUE(t.v2() == ngl::Vec3(0.5f));
     EXPECT_TRUE(t.v3() == ngl::Vec3(0.0f, 1.0f, 1.0f));
-    EXPECT_FLOAT_EQ(t.surface_area(), 1.0606601);
+    EXPECT_FLOAT_EQ(t.surface_area(), 1.0606601f);
 }
 
 TEST(Triangle,setVertices)
@@ -176,7 +177,7 @@ TEST(Triangle,setVertices)
     EXPECT_TRUE(t.v1() == ngl::Vec3(2.0f));
     EXPECT_TRUE(t.v2() == ngl::Vec3(0.5f));
     EXPECT_TRUE(t.v3() == ngl::Vec3(0.0f, 1.0f, 1.0f));
-    EXPECT_FLOAT_EQ(t.surface_area(), 1.0606601);
+    EXPECT_FLOAT_EQ(t.surface_area(), 1.0606601f);
     t.setUV1(ngl::Vec2(0.5f, 0.5f));
     t.setUV2(ngl::Vec2(0.2f, 0.2f));
     t.setUV3(ngl::Vec2(0.2f, 0.5f));
@@ -227,6 +228,25 @@ TEST(Cloth,init)
     EXPECT_TRUE(corners == c.corners());
 }
 
+TEST(Cloth,clear)
+{
+    std::vector<size_t> corners = {0, 1, 2, 3};
+    auto toParam = [](ngl::Vec3 _v) -> ngl::Vec2
+    {
+        ngl::Vec2 n;
+        n.m_x = _v.m_x;
+        n.m_y = _v.m_z;
+        return n;
+    };
+    Cloth c(WOOL);
+    c.init("../gnatvCloth/obj/clothLowResXZ.obj", toParam, corners, 2.0f);
+    c.clear();
+    corners.clear();
+    EXPECT_TRUE(c.numMasses() == 0);
+    EXPECT_TRUE(c.numTriangles() == 0);
+    EXPECT_TRUE(corners == c.corners());
+}
+
 TEST(Cloth,fixCorners)
 {
     std::vector<size_t> corners = {0, 1, 2, 3};
@@ -253,4 +273,15 @@ TEST(Cloth,fixCorners)
     EXPECT_TRUE(c.isCornerFixed() == c3);
     c.fixCorners(c4);
     EXPECT_TRUE(c.isCornerFixed() == c4);
+}
+
+TEST(ClothInterface,dfltctor)
+{
+    ClothInterface ci("../gnatvCloth/obj/");
+    EXPECT_TRUE(ci.numClothPts() == 289);
+    EXPECT_TRUE(ci.numClothTris() == 512);
+    EXPECT_TRUE(ci.objPath() == "../gnatvCloth/obj/");
+    EXPECT_TRUE(ci.intMethod() == 1);
+    EXPECT_TRUE(ci.initConfig() == 0);
+    EXPECT_TRUE(ci.fixPointSetup() == 0);
 }

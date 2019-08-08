@@ -47,6 +47,10 @@ public:
     */
     void init(std::string _filename, std::function<ngl::Vec2(ngl::Vec3)> _toParam,
               std::vector<size_t> _corners, float _dampingCoefficient = 3.0f);
+    /**
+     * @brief clears all elements stored in cloth
+    */
+    void clear();
 
     // GETTERS
     /**

@@ -65,6 +65,14 @@ public slots:
      * @brief a slot to toggle wireframe mode
     */
     void toggleWireframe(bool _mode);
+    /**
+     * @brief slot to start the cloth sim
+    */
+    void startSim();
+    /**
+     * @brief slot to stop the cloth sim
+    */
+    void stopSim();
 
 private:
     /**
@@ -112,6 +120,7 @@ private:
     std::unique_ptr<ngl::AbstractVAO> m_clothVAO;   /**< VAO for the cloth triangles */
 
     bool m_wireframe = false;       /**< Whether or not the cloth is visualized in wireframe */
+    int m_timerId;                  /**< Id for starting/stopping the timer */
 };
 
 

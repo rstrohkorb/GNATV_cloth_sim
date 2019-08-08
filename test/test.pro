@@ -2,7 +2,8 @@ TARGET=test
 SOURCES+= main.cpp \
           ../gnatvCloth/src/Cloth.cpp \
           ../gnatvCloth/src/MassPoint.cpp \
-          ../gnatvCloth/src/Triangle.cpp
+          ../gnatvCloth/src/Triangle.cpp \
+          ../gnatvCloth/src/ClothInterface.cpp
 
 LIBS+= -lgtest
 INCLUDEPATH+= ../gnatvCloth/include

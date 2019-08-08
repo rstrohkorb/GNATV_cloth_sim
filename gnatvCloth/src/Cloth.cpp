@@ -74,6 +74,14 @@ void Cloth::init(std::string _filename, std::function<ngl::Vec2(ngl::Vec3)> _toP
     m_filter.resize(m_mspts.size());
 }
 
+void Cloth::clear()
+{
+    m_mspts.clear();
+    m_triangles.clear();
+    m_corners.clear();
+    m_filter.clear();
+}
+
 void Cloth::render(std::vector<float> &o_vertexData)
 {
     // determine vertex normals

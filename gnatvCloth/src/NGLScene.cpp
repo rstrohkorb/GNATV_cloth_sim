@@ -36,6 +36,7 @@ NGLScene::~NGLScene()
 
 void NGLScene::timerEvent(QTimerEvent *_event)
 {
+    m_timerId = _event->timerId();
 //    for(size_t i = 0; i < 10; ++i)
 //    {
 //        m_cloth.update(0.001f, ngl::Vec3(0.0f));
@@ -170,4 +171,14 @@ void NGLScene::toggleWireframe(bool _mode)
 {
     m_wireframe=_mode;
     update();
+}
+
+void NGLScene::startSim()
+{
+    startTimer(10);
+}
+
+void NGLScene::stopSim()
+{
+    killTimer(m_timerId);
 }

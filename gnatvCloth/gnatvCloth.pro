@@ -8,7 +8,8 @@ SOURCES+= src/main.cpp \
           src/Triangle.cpp \
           src/NGLScene.cpp \
           src/NGLSceneMouseControls.cpp \
-          src/MainWindow.cpp
+          src/MainWindow.cpp \
+          src/ClothInterface.cpp
 
 HEADERS+= include/Cloth.h \
           include/MassPoint.h \
@@ -16,7 +17,8 @@ HEADERS+= include/Cloth.h \
           include/NGLScene.h \
           include/WindowParams.h \
           include/Materials.h \
-          include/MainWindow.h
+          include/MainWindow.h \
+          include/ClothInterface.h
 
 FORMS+= ui/MainWindow.ui
 

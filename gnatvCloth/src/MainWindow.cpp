@@ -13,9 +13,12 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent), m_ui(new Ui::MainW
 
   m_gl=new  NGLScene(this);
 
-  // SIGNALS AND SLOTS BABY
+  // SIGNALS AND SLOTS
   m_ui->s_mainWindowGridLayout->addWidget(m_gl,0,0,2,1);
   connect(m_ui->m_wireframe, SIGNAL(toggled(bool)), m_gl, SLOT(toggleWireframe(bool)));
+  // start/stop sim slots
+  connect(m_ui->m_startButton, SIGNAL(clicked()), m_gl, SLOT(startSim()));
+  connect(m_ui->m_stopButton, SIGNAL(clicked()), m_gl, SLOT(stopSim()));
 //  // set the rotation signals
 //  connect(m_ui->m_rotationX,SIGNAL(valueChanged(double)),m_gl,SLOT(setXRotation(double)));
 //  connect(m_ui->m_rotationY,SIGNAL(valueChanged(double)),m_gl,SLOT(setYRotation(double)));
