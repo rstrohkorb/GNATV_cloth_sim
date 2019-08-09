@@ -8,6 +8,7 @@
 #define CLOTH_INTERFACE_H_
 
 #include <string>
+#include <ngl/Vec3.h>
 #include "Cloth.h"
 
 /**
@@ -24,7 +25,7 @@ enum Config {LRXZ, LRXY, HRXZ, HRXY};
  * @enum FixPtSetup
  * @brief options for fixing points within the cloth, for testing purposes
 */
-enum FixPtSetup {NONE, CORNERS, HANG, FLAG, PULL_TEST};
+enum FixPtSetup {NONE, CORNERS, HANG, FLAG, WEFT_TEST, WARP_TEST};
 
 /**
  * @class ClothInterface
@@ -43,13 +44,17 @@ public:
     */
     ClothInterface(std::string _objPath);
     /**
-     * @brief user constructor
+     * @brief user constructor for general use
     */
+    ClothInterface(IntegrationMethod _intm, Config _cnfg, FixPtSetup _fxpts, std::string _objPath = "obj/");
     /**
-     * @brief initializes cloth to input/default parameters
+     * @brief initializes cloth to member parameters
     */
     void initCloth();
-    void initCloth(Config _config, FixPtSetup _fxpt);
+    /**
+     * @brief set up the fixed points in the cloth based on fixptsetup
+    */
+    void fixClothPts();
 
     // GETTERS
     /**
@@ -76,16 +81,56 @@ public:
      * @brief returns the handler for which points in the cloth are fixed
     */
     FixPtSetup fixPointSetup() const { return m_fixpt; }
+    /**
+     * @brief returns whether or not the wind is on
+    */
+    bool isWindOn() const { return m_windOn; }
+
+    // SETTERS
+    /**
+     * @brief set the initial config and reinit the cloth object
+    */
+    void setConfig(Config _config);
+    /**
+     * @brief set the fixpoint configuration and refix the cloth points
+    */
+    void setFixPtSetup(FixPtSetup _fixpt);
+    /**
+     * @brief sets which integration method will be used
+    */
+    void setIntMethod(IntegrationMethod _intm) { m_intm = _intm; }
+    /**
+     * @brief turns wind on/off
+    */
+    void setWindState(bool _isWindOn) { m_windOn = _isWindOn; }
+
+    // RUN CLOTH SIM
+    /**
+     * @brief run a single step of the cloth sim using our integration method
+    */
+    void updateCloth(float _h);
+    /**
+     * @brief spit out cloth data to render
+    */
+    void renderCloth(std::vector<float> &o_vertexData);
 
 private:
+    // HELPER FUNCTIONS
+
+
     // MEMBER VARIABLES
     Cloth m_cloth = Cloth(WOOL);        /**< Cloth object */
-
-    std::string m_objPath = "obj/";
 
     IntegrationMethod m_intm = CGM;     /**< Integration method */
     Config m_config = LRXZ;             /**< Starting config of cloth object */
     FixPtSetup m_fixpt = NONE;          /**< Handler for which points in the cloth are fixed */
+    size_t m_sideLength = 15;           /**< Length of the cloth's side, for fixing points */
+
+    std::string m_objPath = "obj/";     /**< Path to the obj files */
+
+    bool m_windOn = false;                                  /**< Whether or not the wind external force is turned on */
+    ngl::Vec3 m_windVector = ngl::Vec3(1.0f, 0.0f, 1.0f);   /**< Current base wind vector */
+    size_t m_updateCount = 0;                               /**< Count of how many updates we've done in this config */
 };
 
 #endif

@@ -12,20 +12,20 @@
 
 NGLScene::NGLScene(QWidget *_parent) : QOpenGLWidget( _parent )
 {
-  // initialize cloth
-  std::vector<size_t> corners = {0, 1, 2, 3};
-  m_cloth = Cloth(WOOL);
-  // lambda to get the cloth points from world space into 2D parametric space
-  auto toParam = [](ngl::Vec3 _v) -> ngl::Vec2
-  {
-      ngl::Vec2 n;
-      n.m_x = _v.m_x;
-      n.m_y = _v.m_z;
-      return n;
-  };
-  m_cloth.init("obj/clothLowResXZ.obj", toParam, corners, 9.0f);
-  std::vector<bool> fixedCorners = {1, 1, 1, 1};
-  //m_cloth.fixCorners(fixedCorners);
+//  // initialize clothInterface
+//  std::vector<size_t> corners = {0, 1, 2, 3};
+//  m_cloth = Cloth(WOOL);
+//  // lambda to get the cloth points from world space into 2D parametric space
+//  auto toParam = [](ngl::Vec3 _v) -> ngl::Vec2
+//  {
+//      ngl::Vec2 n;
+//      n.m_x = _v.m_x;
+//      n.m_y = _v.m_z;
+//      return n;
+//  };
+//  m_cloth.init("obj/clothLowResXZ.obj", toParam, corners, 9.0f);
+//  std::vector<bool> fixedCorners = {1, 1, 1, 1};
+//  //m_cloth.fixCorners(fixedCorners);
 }
 
 
@@ -41,7 +41,7 @@ void NGLScene::timerEvent(QTimerEvent *_event)
 //    {
 //        m_cloth.update(0.001f, ngl::Vec3(0.0f));
 //    }
-    m_cloth.update(0.01f, ngl::Vec3(0.0f));
+    m_ci.updateCloth(0.01f);
     update();
 }
 
@@ -113,7 +113,7 @@ void NGLScene::paintGL()
 
   // render cloth
   std::vector<float> tri;
-  m_cloth.render(tri);
+  m_ci.renderCloth(tri);
 
   m_clothVAO->bind();
   m_clothVAO->setData(ngl::SimpleVAO::VertexData(tri.size()*sizeof(float), tri[0]));
@@ -159,7 +159,6 @@ void NGLScene::keyPressEvent(QKeyEvent *_event)
   case Qt::Key_P :
       startTimer(5);
       break;
-  case Qt::Key_U : m_cloth.update(0.5f, ngl::Vec3(0.0f)); break;
   default : break;
   }
   // finally update the GLWindow and re-draw
@@ -181,4 +180,58 @@ void NGLScene::startSim()
 void NGLScene::stopSim()
 {
     killTimer(m_timerId);
+}
+
+void NGLScene::resetSim()
+{
+    killTimer(m_timerId);
+    m_ci.initCloth();
+    m_ci.fixClothPts();
+    update();
+}
+
+void NGLScene::changeConfig(int _config)
+{
+    // select config
+    switch(_config)
+    {
+    case 0: m_ci.setConfig(LRXZ); break;
+    case 1: m_ci.setConfig(LRXY); break;
+    case 2: m_ci.setConfig(HRXZ); break;
+    case 3: m_ci.setConfig(HRXY); break;
+    default: break;
+    }
+    // redo fixpts, since reinit occured
+    m_ci.fixClothPts();
+    // redraw
+    update();
+}
+
+void NGLScene::changeFixpt(int _fixpt)
+{
+    switch(_fixpt)
+    {
+    case 0: m_ci.setFixPtSetup(NONE); break;
+    case 1: m_ci.setFixPtSetup(CORNERS); break;
+    case 2: m_ci.setFixPtSetup(HANG); break;
+    case 3: m_ci.setFixPtSetup(FLAG); break;
+    case 4: m_ci.setFixPtSetup(WEFT_TEST); break;
+    case 5: m_ci.setFixPtSetup(WARP_TEST); break;
+    default: break;
+    }
+}
+
+void NGLScene::changeIntMethod(int _intm)
+{
+    switch(_intm)
+    {
+    case 0: m_ci.setIntMethod(CGM); break;
+    case 1: m_ci.setIntMethod(RK4); break;
+    default: break;
+    }
+}
+
+void NGLScene::toggleWind(bool _isWindOn)
+{
+    m_ci.setWindState(_isWindOn);
 }

@@ -285,3 +285,29 @@ TEST(ClothInterface,dfltctor)
     EXPECT_TRUE(ci.initConfig() == 0);
     EXPECT_TRUE(ci.fixPointSetup() == 0);
 }
+
+TEST(ClothInterface,userctor)
+{
+    ClothInterface ci(RK4, HRXY, CORNERS, "../gnatvCloth/obj/");
+    EXPECT_TRUE(ci.numClothPts() == 1024);
+    EXPECT_TRUE(ci.numClothTris() == 1922);
+    EXPECT_TRUE(ci.objPath() == "../gnatvCloth/obj/");
+    EXPECT_TRUE(ci.intMethod() == RK4);
+    EXPECT_TRUE(ci.initConfig() == HRXY);
+    EXPECT_TRUE(ci.fixPointSetup() == CORNERS);
+}
+
+TEST(ClothInterface,setters)
+{
+    ClothInterface ci("../gnatvCloth/obj/");
+    ci.setFixPtSetup(HANG);
+    EXPECT_TRUE(ci.fixPointSetup() == HANG);
+    ci.setIntMethod(RK4);
+    EXPECT_TRUE(ci.intMethod() == RK4);
+    ci.setWindState(true);
+    EXPECT_TRUE(ci.isWindOn());
+    ci.setConfig(HRXZ);
+    EXPECT_TRUE(ci.initConfig() == HRXZ);
+    EXPECT_TRUE(ci.numClothPts() == 1024);
+    EXPECT_TRUE(ci.numClothTris() == 1922);
+}

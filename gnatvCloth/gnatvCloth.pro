@@ -18,7 +18,8 @@ HEADERS+= include/Cloth.h \
           include/WindowParams.h \
           include/Materials.h \
           include/MainWindow.h \
-          include/ClothInterface.h
+          include/ClothInterface.h \
+          include/FixPtTestDefaults.h
 
 FORMS+= ui/MainWindow.ui
 

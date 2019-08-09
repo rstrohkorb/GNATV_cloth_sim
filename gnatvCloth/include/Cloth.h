@@ -101,7 +101,7 @@ public:
      * @param _h time step
      * @param _externalf any non-gravity external forces acting on the masspoints
     */
-    void update(float _h, ngl::Vec3 _externalf);
+    void update(float _h, bool _useRK4, std::vector<ngl::Vec3> _externalf);
 
     // FIX POINT OPERATORS
     /**
@@ -146,7 +146,7 @@ private:
      * @param _calcJacobians whether or not the jacobians should be calculated
      * @param _useJvel whether or not the velocity jacobians should be calculated
     */
-    void forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians, bool _useJvel = false);
+    void forceCalc(float _h, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel = false);
     /**
      * @brief calculates the internal forces acting within a given triangle
      * @param _tr the triangle for which we are calculating the current internal forces
@@ -166,7 +166,7 @@ private:
      * @param _h time step
      * @param _externalf non-gravity external forces acting on the masspoints
     */
-    void rk4Integrate(float _h, ngl::Vec3 _externalf);
+    void rk4Integrate(float _h, std::vector<ngl::Vec3> _externalf);
 
     /**
      * @brief calculates current strain based on the warp/weft vectors U and V

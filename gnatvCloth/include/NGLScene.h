@@ -16,7 +16,7 @@
 #include <ngl/AbstractVAO.h>
 
 #include "WindowParams.h"
-#include "Cloth.h"
+#include "ClothInterface.h"
 
 #include <QEvent>
 #include <QResizeEvent>
@@ -73,6 +73,26 @@ public slots:
      * @brief slot to stop the cloth sim
     */
     void stopSim();
+    /**
+     * @brief slot to reset the cloth sim
+    */
+    void resetSim();
+    /**
+     * @brief change starting configuration of the cloth
+    */
+    void changeConfig(int _config);
+    /**
+     * @brief change which points in the cloth are fixed
+    */
+    void changeFixpt(int _fixpt);
+    /**
+     * @brief change the integration method used to run cloth sim
+    */
+    void changeIntMethod(int _intm);
+    /**
+     * @brief turn on/off the wind
+    */
+    void toggleWind(bool _isWindOn);
 
 private:
     /**
@@ -112,12 +132,13 @@ private:
     // MEMBER VARIABLES
     WinParams m_win;                /**< Windows parameters for mouse control etc. */
     ngl::Vec3 m_modelPos;           /**< Position for the model */
-    Cloth m_cloth = Cloth(WOOL);    /**< Cloth object */
     ngl::Mat4 m_view;               /**< View matrix */
     ngl::Mat4 m_project;            /**< Project matrix */
     ngl::Vec4 m_lightPos;           /**< Light position in world space */
 
     std::unique_ptr<ngl::AbstractVAO> m_clothVAO;   /**< VAO for the cloth triangles */
+
+    ClothInterface m_ci;            /**< ClothInterface object */
 
     bool m_wireframe = false;       /**< Whether or not the cloth is visualized in wireframe */
     int m_timerId;                  /**< Id for starting/stopping the timer */

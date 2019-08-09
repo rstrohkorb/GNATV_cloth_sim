@@ -159,7 +159,7 @@ void Cloth::writeToObj(std::string _filename)
     obj.close();
 }
 
-void Cloth::update(float _h, ngl::Vec3 _externalf)
+void Cloth::update(float _h, bool _useRK4, std::vector<ngl::Vec3> _externalf)
 {
     bool useJvel = false;
     bool useDamping = true;
@@ -168,16 +168,22 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
     // STEP 1 - FORCE CALCULATIONS
     forceCalc(_h, _externalf, true, useJvel);
     // STEP 2 - LET'S INTEGRATE
-    auto deltaVel = conjugateGradient(_h, useJvel, useDamping);
-    // Update particle velocities and positions
-    for(size_t i = 0; i < m_mspts.size(); ++i)
+    if(_useRK4)
     {
-        auto newVel = m_mspts[i].vel() + deltaVel[i];
-        auto newPos = m_mspts[i].pos() + (_h * newVel);
-        m_mspts[i].setVel(newVel);
-        m_mspts[i].setPos(newPos);
+        rk4Integrate(_h, _externalf);
     }
-    //rk4Integrate(_h, _externalf);
+    else
+    {
+        auto deltaVel = conjugateGradient(_h, useJvel, useDamping);
+        // Update particle velocities and positions
+        for(size_t i = 0; i < m_mspts.size(); ++i)
+        {
+            auto newVel = m_mspts[i].vel() + deltaVel[i];
+            auto newPos = m_mspts[i].pos() + (_h * newVel);
+            m_mspts[i].setVel(newVel);
+            m_mspts[i].setPos(newPos);
+        }
+    }
     // STEP 3 - CLEANUP AND STATE HANDLING
     for(auto& tr : m_triangles)
     {
@@ -187,7 +193,7 @@ void Cloth::update(float _h, ngl::Vec3 _externalf)
 
 void Cloth::fixCorners(std::vector<bool> _isPtFixed)
 {
-    for(size_t i = 0; i < m_corners.size(); ++i)
+    for(size_t i = 0; i < _isPtFixed.size(); ++i)
     {
         // set the point as fixed
         m_mspts[m_corners[i]].setFixed(_isPtFixed[i]);
@@ -195,6 +201,10 @@ void Cloth::fixCorners(std::vector<bool> _isPtFixed)
         if(_isPtFixed[i])
         {
             m_filter[m_corners[i]] = ngl::Mat3(0.0f);
+        }
+        else
+        {
+            m_filter[m_corners[i]] = ngl::Mat3(1.0f);
         }
     }
 }
@@ -291,7 +301,7 @@ void Cloth::nullForces()
     }
 }
 
-void Cloth::forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians, bool _useJvel)
+void Cloth::forceCalc(float _h, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel)
 {
     // Internal force calculations per triangle
     for(auto tr : m_triangles)
@@ -301,15 +311,15 @@ void Cloth::forceCalc(float _h, ngl::Vec3 _externalf, bool _calcJacobians, bool 
     // External forces
     ngl::Vec3 fgravity, airRes;
     fgravity = ngl::Vec3(0.0f, -9.8f, 0.0f);
-    for(auto &m : m_mspts)
+    for(size_t i = 0; i < m_mspts.size(); ++i)
     {
-        airRes = m.vel();
+        airRes = m_mspts[i].vel();
         if(airRes != ngl::Vec3(0.0f))
         {
             airRes.normalize();
-            airRes *= -1.0f * m.vel().lengthSquared();
+            airRes *= -1.0f * m_mspts[i].vel().lengthSquared();
         }
-        m.addForce((fgravity * m.mass()) + airRes + _externalf);
+        m_mspts[i].addForce((fgravity * m_mspts[i].mass()) + airRes + _externalf[i]);
     }
 }
 
@@ -461,7 +471,7 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h, bool _useJvel, bool _u
     return x;
 }
 
-void Cloth::rk4Integrate(float _h, ngl::Vec3 _externalf)
+void Cloth::rk4Integrate(float _h, std::vector<ngl::Vec3> _externalf)
 {
     std::vector<ngl::Vec3> initpos, initvel, k1pos, k1vel, k2pos, k2vel, k3pos, k3vel, k4pos, k4vel;
     // 3.1 - DETERMINE INIT/K1 VALUES
