@@ -114,6 +114,14 @@ public:
     */
     void renderCloth(std::vector<float> &o_vertexData);
 
+    // RUN FORCE/DISPLACEMENT TESTS
+    /**
+     * @brief run force/displacement test in the weft direction
+    */
+    void runWeftTest();
+    // runWarpTest
+    // runShearTest
+
 private:
     // HELPER FUNCTIONS
 

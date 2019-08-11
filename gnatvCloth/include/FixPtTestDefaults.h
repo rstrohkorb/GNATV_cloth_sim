@@ -49,4 +49,15 @@ static auto toParamXZ = [](ngl::Vec3 _v) -> ngl::Vec2
     return n;
 };
 
+// define which points need to be pulled for each of the weft/warp/shear tests
+static std::vector<size_t> weftTestPullPts = {
+    1, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 3
+};
+static std::vector<size_t> warpTestPullPts = {
+    2, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105, 104, 103, 102, 101, 100, 99, 98, 97, 96, 95, 94, 3
+};
+static std::vector<size_t> shearTestPullRight = {
+    0, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 2
+};
+
 #endif

@@ -1,6 +1,8 @@
 #include <string>
 #include <vector>
 #include <random>
+#include <fstream>
+#include <iostream>
 #include <ngl/Vec2.h>
 #include <ngl/Vec3.h>
 #include "ClothInterface.h"
@@ -175,7 +177,7 @@ void ClothInterface::updateCloth(float _h)
         _useRK4 = true;
     }
     // send to cloth update
-    m_cloth.update(_h, _useRK4, externalf);
+    m_cloth.update(_h, _useRK4, true, externalf);
     // increment counter
     ++m_updateCount;
 }
@@ -183,4 +185,46 @@ void ClothInterface::updateCloth(float _h)
 void ClothInterface::renderCloth(std::vector<float> &o_vertexData)
 {
     m_cloth.render(o_vertexData);
+}
+
+void ClothInterface::runWeftTest()
+{
+    // save previous settings
+    auto old_config = m_config;
+    auto old_fixpt = m_fixpt;
+    auto old_windOn = m_windOn;
+    // change to settings needed for test
+    m_config = HRXZ;
+    m_fixpt = WEFT_TEST;
+    m_windOn = false;
+    // reinit
+    initCloth();
+
+    // open file
+    std::ofstream out;
+    out.open("results/weft_test_results.txt");
+    out << "Weft Test Results\n\n";
+    // take an initial measurement of the elements being pulled - going in negative z
+    out << "Initial state: Force = 0.0\n";
+    for(auto k : weftTestPullPts)
+    {
+        out << m_cloth.posAtPoint(k).m_z << ' ';
+    }
+    out << '\n';
+    // test loop
+    size_t max_loops = 1000;
+    for(size_t i = 0; i < max_loops; ++i)
+    {
+        // make external forces
+        std::vector<ngl::Vec3> externalf;
+        externalf.resize(m_cloth.numMasses());
+    }
+
+    // close file
+    out.close();
+    // now that we're done, reinit back to old settings
+    m_config = old_config;
+    m_fixpt = old_fixpt;
+    m_windOn = old_windOn;
+    initCloth();
 }

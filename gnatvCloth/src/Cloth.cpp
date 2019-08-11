@@ -159,18 +159,18 @@ void Cloth::writeToObj(std::string _filename)
     obj.close();
 }
 
-void Cloth::update(float _h, bool _useRK4, std::vector<ngl::Vec3> _externalf)
+void Cloth::update(float _h, bool _useRK4, bool _gravityOn, std::vector<ngl::Vec3> _externalf)
 {
     bool useJvel = false;
     bool useDamping = true;
     // STEP 0 - ZERO OUT CURRENT FORCES/JACOBIANS ON EACH MASSPOINT
     nullForces();
     // STEP 1 - FORCE CALCULATIONS
-    forceCalc(_h, _externalf, true, useJvel);
+    forceCalc(_h, _gravityOn, _externalf, true, useJvel);
     // STEP 2 - LET'S INTEGRATE
     if(_useRK4)
     {
-        rk4Integrate(_h, _externalf);
+        rk4Integrate(_h, _gravityOn, _externalf);
     }
     else
     {
@@ -301,16 +301,24 @@ void Cloth::nullForces()
     }
 }
 
-void Cloth::forceCalc(float _h, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel)
+void Cloth::forceCalc(float _h, bool _gravityOn, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel)
 {
     // Internal force calculations per triangle
     for(auto tr : m_triangles)
     {
         forceCalcPerTriangle(tr, _calcJacobians, _useJvel);
     }
-    // External forces
+    // gravity
     ngl::Vec3 fgravity, airRes;
-    fgravity = ngl::Vec3(0.0f, -9.8f, 0.0f);
+    if(_gravityOn)
+    {
+        fgravity = ngl::Vec3(0.0f, -9.8f, 0.0f);
+    }
+    else
+    {
+        fgravity  = ngl::Vec3(0.0f);
+    }
+    // air resistance
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
         airRes = m_mspts[i].vel();
@@ -471,7 +479,7 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h, bool _useJvel, bool _u
     return x;
 }
 
-void Cloth::rk4Integrate(float _h, std::vector<ngl::Vec3> _externalf)
+void Cloth::rk4Integrate(float _h, bool _gravityOn, std::vector<ngl::Vec3> _externalf)
 {
     std::vector<ngl::Vec3> initpos, initvel, k1pos, k1vel, k2pos, k2vel, k3pos, k3vel, k4pos, k4vel;
     // 3.1 - DETERMINE INIT/K1 VALUES
@@ -489,7 +497,7 @@ void Cloth::rk4Integrate(float _h, std::vector<ngl::Vec3> _externalf)
         m_mspts[i].setVel(initvel[i] + (k1vel[i] * _h * 0.5f));
     }
     nullForces();
-    forceCalc(_h, _externalf, false);
+    forceCalc(_h, _gravityOn, _externalf, false);
     // 3.2 - DETERMINE K2 VALUES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
@@ -503,7 +511,7 @@ void Cloth::rk4Integrate(float _h, std::vector<ngl::Vec3> _externalf)
         m_mspts[i].setVel(initvel[i] + (k2vel[i] * _h * 0.5f));
     }
     nullForces();
-    forceCalc(_h, _externalf, false);
+    forceCalc(_h, _gravityOn, _externalf, false);
     // 3.3 - DETERMINE K3 VALUES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
@@ -517,7 +525,7 @@ void Cloth::rk4Integrate(float _h, std::vector<ngl::Vec3> _externalf)
         m_mspts[i].setVel(initvel[i] + (k3vel[i] * _h));
     }
     nullForces();
-    forceCalc(_h, _externalf, false);
+    forceCalc(_h, _gravityOn, _externalf, false);
     // 3.4 - DETERMINE K4 VALUES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {

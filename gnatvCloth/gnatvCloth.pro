@@ -2,6 +2,9 @@ TARGET=gnatvCloth
 
 QT+=gui opengl core
 
+OBJECTS_DIR=obj
+MOC_DIR=moc
+
 SOURCES+= src/main.cpp \
           src/Cloth.cpp \
           src/MassPoint.cpp \

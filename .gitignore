@@ -42,7 +42,5 @@ target_wrapper.*
 # QtCreator CMake
 CMakeLists.txt.user*
 
-# specific header from boost library
-# had to do this for the school machine build
-# since it was running an older version of boost
-*.hpp
+# don't commit the baked out stuff in the results folder
+/results/*
