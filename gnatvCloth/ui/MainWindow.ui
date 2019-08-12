@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>972</width>
+    <width>1148</width>
     <height>656</height>
    </rect>
   </property>
@@ -16,212 +16,11 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="s_mainWindowGridLayout">
     <item row="0" column="1">
-     <widget class="QGroupBox" name="s_transformGB">
+     <widget class="QGroupBox" name="s_simOptions">
       <property name="title">
-       <string>Transform</string>
+       <string>Simulation Options</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Rotation</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QDoubleSpinBox" name="m_rotationX">
-         <property name="minimum">
-          <double>-360.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>360.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QDoubleSpinBox" name="m_rotationY">
-         <property name="minimum">
-          <double>-360.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>360.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QDoubleSpinBox" name="m_rotationZ">
-         <property name="minimum">
-          <double>-360.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>360.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Scale</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QDoubleSpinBox" name="m_scaleX">
-         <property name="minimum">
-          <double>-4.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>4.000000000000000</double>
-         </property>
-         <property name="singleStep">
-          <double>0.010000000000000</double>
-         </property>
-         <property name="value">
-          <double>1.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QDoubleSpinBox" name="m_scaleY">
-         <property name="minimum">
-          <double>-4.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>4.000000000000000</double>
-         </property>
-         <property name="singleStep">
-          <double>0.010000000000000</double>
-         </property>
-         <property name="value">
-          <double>1.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QDoubleSpinBox" name="m_scaleZ">
-         <property name="minimum">
-          <double>-4.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>4.000000000000000</double>
-         </property>
-         <property name="singleStep">
-          <double>0.010000000000000</double>
-         </property>
-         <property name="value">
-          <double>1.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_3">
-         <property name="text">
-          <string>Position</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QDoubleSpinBox" name="m_positionX">
-         <property name="minimum">
-          <double>-20.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>20.000000000000000</double>
-         </property>
-         <property name="singleStep">
-          <double>0.010000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QDoubleSpinBox" name="m_positionY">
-         <property name="minimum">
-          <double>-20.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>20.000000000000000</double>
-         </property>
-         <property name="singleStep">
-          <double>0.010000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="2">
-        <widget class="QDoubleSpinBox" name="m_positionZ">
-         <property name="minimum">
-          <double>-20.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>20.000000000000000</double>
-         </property>
-         <property name="singleStep">
-          <double>0.010000000000000</double>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <item row="1" column="1">
-     <widget class="QGroupBox" name="s_drawGB">
-      <property name="title">
-       <string>Draw</string>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="15" column="0" colspan="2">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="1" column="0">
-        <widget class="QComboBox" name="m_configSelect">
-         <property name="currentIndex">
-          <number>0</number>
-         </property>
-         <item>
-          <property name="text">
-           <string>Low Res XZ</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Low Res XY</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>High Res XZ</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>High Res XY</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="5" column="0">
-        <widget class="QPushButton" name="m_startButton">
-         <property name="text">
-          <string>Start</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>Fixed Points</string>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="1">
         <widget class="QComboBox" name="m_fixptSelect">
          <item>
@@ -256,10 +55,17 @@
          </item>
         </widget>
        </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="label_6">
+       <item row="2" column="0" colspan="3" alignment="Qt::AlignLeft">
+        <widget class="QLabel" name="label">
          <property name="text">
-          <string>Integration Method</string>
+          <string>Run Sim</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="m_startButton">
+         <property name="text">
+          <string>Start</string>
          </property>
         </widget>
        </item>
@@ -270,6 +76,54 @@
          </property>
         </widget>
        </item>
+       <item row="3" column="2">
+        <widget class="QPushButton" name="m_resetButton">
+         <property name="text">
+          <string>Reset</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QPushButton" name="m_stopButton">
+         <property name="text">
+          <string>Stop</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QComboBox" name="m_configSelect">
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <item>
+          <property name="text">
+           <string>Low Res XZ</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Low Res XY</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>High Res XZ</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>High Res XY</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QCheckBox" name="m_isWindOn">
+         <property name="text">
+          <string>Wind</string>
+         </property>
+        </widget>
+       </item>
        <item row="4" column="0">
         <widget class="QCheckBox" name="m_wireframe">
          <property name="text">
@@ -277,7 +131,21 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item row="0" column="1">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>Fixed Points</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>Integration</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
         <widget class="QComboBox" name="m_intMethodSelect">
          <item>
           <property name="text">
@@ -291,12 +159,27 @@
          </item>
         </widget>
        </item>
-       <item row="5" column="1">
-        <widget class="QPushButton" name="m_stopButton">
-         <property name="text">
-          <string>Stop</string>
+      </layout>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QGroupBox" name="s_runTests">
+      <property name="title">
+       <string>Run Tests</string>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="15" column="0" colspan="2">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
-        </widget>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
        <item row="14" column="0" colspan="2">
         <widget class="QPushButton" name="m_colour">
@@ -305,17 +188,10 @@
          </property>
         </widget>
        </item>
-       <item row="13" column="0" colspan="2">
-        <widget class="QPushButton" name="m_resetButton">
+       <item row="6" column="0">
+        <widget class="QPushButton" name="m_runWeftTest">
          <property name="text">
-          <string>Reset</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QCheckBox" name="m_isWindOn">
-         <property name="text">
-          <string>Wind</string>
+          <string>Run Weft Test</string>
          </property>
         </widget>
        </item>
@@ -342,7 +218,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>972</width>
+     <width>1148</width>
      <height>25</height>
     </rect>
    </property>

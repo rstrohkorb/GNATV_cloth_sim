@@ -25,6 +25,8 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent), m_ui(new Ui::MainW
   connect(m_ui->m_configSelect, SIGNAL(currentIndexChanged(int)), m_gl, SLOT(changeConfig(int)));
   connect(m_ui->m_fixptSelect, SIGNAL(currentIndexChanged(int)), m_gl, SLOT(changeFixpt(int)));
   connect(m_ui->m_intMethodSelect, SIGNAL(currentIndexChanged(int)), m_gl, SLOT(changeIntMethod(int)));
+  // weft/warp/shear tests
+  connect(m_ui->m_runWeftTest, SIGNAL(clicked()), m_gl, SLOT(runWeftTest()));
 //  // set the rotation signals
 //  connect(m_ui->m_rotationX,SIGNAL(valueChanged(double)),m_gl,SLOT(setXRotation(double)));
 //  connect(m_ui->m_rotationY,SIGNAL(valueChanged(double)),m_gl,SLOT(setYRotation(double)));

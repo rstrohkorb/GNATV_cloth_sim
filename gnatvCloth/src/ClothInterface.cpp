@@ -60,6 +60,18 @@ void ClothInterface::initCloth()
         toParam = toParamXY;
         fixpts = hiResFixpts;
     } break;
+    case WEFTXZ:
+    {
+        filename = m_objPath + "weftTestCloth.obj";
+        toParam = toParamXZ;
+        fixpts = wwsTestFixpts;
+    } break;
+    case WARPXZ:
+    {
+        filename = m_objPath + "warpTestCloth.obj";
+        toParam = toParamXZ;
+        fixpts = wwsTestFixpts;
+    } break;
     }
     // init cloth
     m_cloth.clear();
@@ -108,22 +120,46 @@ void ClothInterface::fixClothPts()
     } break;
     case WEFT_TEST:
     {
-        whichFixPts = {1, 0, 1, 0};
-        for(size_t i = 0; i < m_sideLength; ++i)
+        whichFixPts = {1, 1, 1, 1};
+        if(m_config == WEFTXZ || m_config == WARPXZ)
         {
-            whichFixPts.push_back(1);
+            for(size_t i = 0; i < (m_sideLength * 2); ++i)
+            {
+                whichFixPts.push_back(1);
+            }
+        }
+        else
+        {
+            for(size_t i = 0; i < (m_sideLength); ++i)
+            {
+                whichFixPts.push_back(1);
+            }
+            for(size_t i = 0; i < (m_sideLength); ++i)
+            {
+                whichFixPts.push_back(0);
+            }
         }
     } break;
     case WARP_TEST:
     {
-        whichFixPts = {1, 1, 0, 0};
-        for(size_t i = 0; i < m_sideLength; ++i)
+        whichFixPts = {1, 1, 1, 1};
+        if(m_config == WEFTXZ || m_config == WARPXZ)
         {
-            whichFixPts.push_back(0);
+            for(size_t i = 0; i < (m_sideLength * 2); ++i)
+            {
+                whichFixPts.push_back(1);
+            }
         }
-        for(size_t i = 0; i < m_sideLength; ++i)
+        else
         {
-            whichFixPts.push_back(1);
+            for(size_t i = 0; i < (m_sideLength); ++i)
+            {
+                whichFixPts.push_back(0);
+            }
+            for(size_t i = 0; i < (m_sideLength); ++i)
+            {
+                whichFixPts.push_back(1);
+            }
         }
     } break;
     }
@@ -194,7 +230,7 @@ void ClothInterface::runWeftTest()
     auto old_fixpt = m_fixpt;
     auto old_windOn = m_windOn;
     // change to settings needed for test
-    m_config = HRXZ;
+    m_config = WEFTXZ;
     m_fixpt = WEFT_TEST;
     m_windOn = false;
     // reinit
@@ -202,22 +238,81 @@ void ClothInterface::runWeftTest()
 
     // open file
     std::ofstream out;
-    out.open("results/weft_test_results.txt");
+    out.open("results/weft_test_results.txt", std::ofstream::out | std::ofstream::trunc);
     out << "Weft Test Results\n\n";
-    // take an initial measurement of the elements being pulled - going in negative z
-    out << "Initial state: Force = 0.0\n";
+    // take an initial measurement of the elements being pulled - going in positive x
+    std::vector<float> initPos;
+    initPos.reserve(weftTestPullPts.size());
     for(auto k : weftTestPullPts)
     {
-        out << m_cloth.posAtPoint(k).m_z << ' ';
+        initPos.push_back(m_cloth.posAtPoint(k).m_x);
     }
-    out << '\n';
     // test loop
-    size_t max_loops = 1000;
-    for(size_t i = 0; i < max_loops; ++i)
+    size_t numTests = weftTestForces.size();
+    for(size_t i = 0; i < numTests; ++i)
     {
         // make external forces
         std::vector<ngl::Vec3> externalf;
         externalf.resize(m_cloth.numMasses());
+        for(auto k : weftTestPullPts)
+        {
+            externalf[k] = ngl::Vec3(weftTestForces[i], 0.0f, 0.0f);
+        }
+        // run updates with this external force applied
+        size_t numLoops = 20;
+        for(size_t j = 0; j < numLoops; ++j)
+        {
+            m_cloth.update(0.01f, true, false, externalf);
+        }
+        // record displacements
+        out << "Test " << i << ", Force " << weftTestForces[i] << " resulted in the following average displacement: \n";
+        float result = 0.0f;
+        for(size_t k = 0; k < weftTestPullPts.size(); ++k)
+        {
+            result += m_cloth.posAtPoint(weftTestPullPts[k]).m_x - initPos[k];
+            //out << m_cloth.posAtPoint(weftTestPullPts[k]).m_x - initPos[k] << ' ';
+        }
+        result = result / weftTestPullPts.size();
+        out << result << '\n';
+        //out << '\n';
+//        // make external forces - 0 vector
+//        std::vector<ngl::Vec3> externalf;
+//        externalf.resize(m_cloth.numMasses());
+//        // displace the end points by the displacement amount in positive x direction
+//        for(size_t j = 0; j < weftTestPullPts.size(); ++j)
+//        {
+//            auto newPos = m_cloth.posAtPoint(weftTestPullPts[j]);
+//            newPos.m_x = initPos[j] + weftTestDisp[i];
+//            m_cloth.setPosAtPoint(weftTestPullPts[j], newPos);
+//        }
+//        // run internal forces
+//        m_cloth.forceCalc(0.01f, false, externalf, false);
+//        // output the sum of the forces at the test points
+//        ngl::Vec3 result;
+//        out << "Test " << i << ", Displacement "<< weftTestDisp[i]<< " resulted in the total edge force:\n";
+//        for(size_t k = 0; k < weftTestPullPts.size(); ++k)
+//        {
+//            result += m_cloth.forcesAtPoint(weftTestPullPts[k]).m_x;
+//            //out << m_cloth.forcesAtPoint(weftTestPullPts[k]).m_x << ' ';
+//        }
+//        //out << '\n';
+//        out << result.m_x << ' ' << result.m_y << ' ' << result.m_z << '\n';
+//        // run updates until equilibrium is reached
+//        size_t equilibriumLoops = 10;
+//        for(size_t l = 0; l < equilibriumLoops; ++l)
+//        {
+//            m_cloth.update(0.01f, true, false, externalf);
+//        }
+//        result.null();
+//        // forces on these points after equilibrium
+//        out << "After Equilibrium: \n";
+//        for(size_t k = 0; k < weftTestPullPts.size(); ++k)
+//        {
+//            result += m_cloth.forcesAtPoint(weftTestPullPts[k]).m_x;
+//        }
+//        out << result.m_x << ' ' << result.m_y << ' ' << result.m_z << '\n';
+        // print out update so we know what's going on
+        std::cout<<"Weft Test: finished loop "<< i << '\n';
     }
 
     // close file
@@ -227,4 +322,9 @@ void ClothInterface::runWeftTest()
     m_fixpt = old_fixpt;
     m_windOn = old_windOn;
     initCloth();
+}
+
+void ClothInterface::runWarpTest()
+{
+
 }

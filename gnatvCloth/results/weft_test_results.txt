@@ -1,0 +1,60 @@
+Weft Test Results
+
+Test 0, Force 0 resulted in the following average displacement: 
+0
+Test 1, Force 0.3 resulted in the following average displacement: 
+0.00339383
+Test 2, Force 0.7 resulted in the following average displacement: 
+0.0108594
+Test 3, Force 2 resulted in the following average displacement: 
+0.0304013
+Test 4, Force 3 resulted in the following average displacement: 
+0.0591031
+Test 5, Force 5 resulted in the following average displacement: 
+0.110701
+Test 6, Force 6 resulted in the following average displacement: 
+0.193463
+Test 7, Force 8 resulted in the following average displacement: 
+0.316044
+Test 8, Force 10 resulted in the following average displacement: 
+0.489571
+Test 9, Force 12 resulted in the following average displacement: 
+0.728178
+Test 10, Force 14 resulted in the following average displacement: 
+1.03762
+Test 11, Force 17 resulted in the following average displacement: 
+1.44039
+Test 12, Force 20 resulted in the following average displacement: 
+1.94437
+Test 13, Force 25 resulted in the following average displacement: 
+2.58246
+Test 14, Force 31 resulted in the following average displacement: 
+3.37962
+Test 15, Force 39 resulted in the following average displacement: 
+4.37929
+Test 16, Force 45 resulted in the following average displacement: 
+5.61826
+Test 17, Force 51 resulted in the following average displacement: 
+7.12894
+Test 18, Force 59 resulted in the following average displacement: 
+8.95448
+Test 19, Force 68 resulted in the following average displacement: 
+11.1421
+Test 20, Force 79 resulted in the following average displacement: 
+13.7548
+Test 21, Force 94 resulted in the following average displacement: 
+16.8597
+Test 22, Force 111 resulted in the following average displacement: 
+20.5512
+Test 23, Force 127 resulted in the following average displacement: 
+24.9213
+Test 24, Force 144 resulted in the following average displacement: 
+30.0628
+Test 25, Force 167 resulted in the following average displacement: 
+36.0923
+Test 26, Force 188 resulted in the following average displacement: 
+43.1346
+Test 27, Force 212 resulted in the following average displacement: 
+51.3192
+Test 28, Force 234 resulted in the following average displacement: 
+60.777

@@ -59,7 +59,7 @@ void MassPoint::setFixed(const bool _isFixed)
 
 void MassPoint::addForce(const ngl::Vec3 _force)
 {
-    if(!m_fixed)
+    //if(!m_fixed)
     {
         m_forces += _force;
     }

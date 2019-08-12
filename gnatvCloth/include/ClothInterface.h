@@ -20,7 +20,7 @@ enum IntegrationMethod {RK4, CGM};
  * @enum startConfig
  * @brief describes starting configuration for the cloth object
 */
-enum Config {LRXZ, LRXY, HRXZ, HRXY};
+enum Config {LRXZ, LRXY, HRXZ, HRXY, WEFTXZ, WARPXZ};
 /**
  * @enum FixPtSetup
  * @brief options for fixing points within the cloth, for testing purposes
@@ -119,7 +119,10 @@ public:
      * @brief run force/displacement test in the weft direction
     */
     void runWeftTest();
-    // runWarpTest
+    /**
+     * @brief run force/displacement test in the warp direction
+    */
+    void runWarpTest();
     // runShearTest
 
 private:

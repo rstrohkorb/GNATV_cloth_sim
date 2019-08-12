@@ -68,7 +68,7 @@ void NGLScene::initializeGL()
   glEnable(GL_MULTISAMPLE);
 
   // set the camera
-  ngl::Vec3 from = {0.0f, 20.0f, 20.0f};
+  ngl::Vec3 from = {0.0f, 10.0f, 20.0f};
   m_view = ngl::lookAt(from, ngl::Vec3::zero(), ngl::Vec3::up());
   // add a light from the camera pos
   m_lightPos.set(from.m_x, from.m_y, from.m_z, 1.0f);
@@ -234,4 +234,9 @@ void NGLScene::changeIntMethod(int _intm)
 void NGLScene::toggleWind(bool _isWindOn)
 {
     m_ci.setWindState(_isWindOn);
+}
+
+void NGLScene::runWeftTest()
+{
+    m_ci.runWeftTest();
 }

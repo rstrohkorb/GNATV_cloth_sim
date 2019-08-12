@@ -80,9 +80,19 @@ public:
     */
     std::vector<size_t> corners() const { return m_corners; }
     /**
-     * @brief returns position of given masspoint
+     * @brief returns position of given masspoint, for weft/warp/shear tests
     */
-    ngl::Vec3 posAtPoint(size_t pt) const { return m_mspts[pt].pos(); }
+    ngl::Vec3 posAtPoint(const size_t _pt) const { return m_mspts[_pt].pos(); }
+    /**
+     * @brief returns forces acting on given masspoint, for weft/warp/shear tests
+    */
+    ngl::Vec3 forcesAtPoint(const size_t _pt) const { return m_mspts[_pt].forces(); }
+
+    // SETTERS
+    /**
+     * @brief sets position of given masspoint, for weft/warp/shear tests
+    */
+    void setPosAtPoint(const size_t _pt, const ngl::Vec3 _pos) { m_mspts[_pt].setPos(_pos); }
 
     // SPIT OUT VERTEX/TRIANGLE DATA
     /**
@@ -110,6 +120,14 @@ public:
      * @param _externalf any non-gravity external forces acting on the masspoints
     */
     void update(float _h, bool _useRK4, bool _gravityOn, std::vector<ngl::Vec3> _externalf);
+    /**
+     * @brief calculates the internal forces acting on the cloth's masspoints
+     * @param _h time setp
+     * @param _externalf non-gravity external forces acting on the masspoints
+     * @param _calcJacobians whether or not the jacobians should be calculated
+     * @param _useJvel whether or not the velocity jacobians should be calculated
+    */
+    void forceCalc(float _h, bool _gravityOn, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel = false);
 
     // FIX POINT OPERATORS
     /**
@@ -147,14 +165,6 @@ private:
      * @brief resets the forces and jacobians of each masspoint to 0
     */
     void nullForces();
-    /**
-     * @brief calculates the internal forces acting on the cloth's masspoints
-     * @param _h time setp
-     * @param _externalf non-gravity external forces acting on the masspoints
-     * @param _calcJacobians whether or not the jacobians should be calculated
-     * @param _useJvel whether or not the velocity jacobians should be calculated
-    */
-    void forceCalc(float _h, bool _gravityOn, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel = false);
     /**
      * @brief calculates the internal forces acting within a given triangle
      * @param _tr the triangle for which we are calculating the current internal forces

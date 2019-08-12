@@ -321,11 +321,18 @@ void Cloth::forceCalc(float _h, bool _gravityOn, std::vector<ngl::Vec3> _externa
     // air resistance
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
-        airRes = m_mspts[i].vel();
-        if(airRes != ngl::Vec3(0.0f))
+        if(_gravityOn)
         {
-            airRes.normalize();
-            airRes *= -1.0f * m_mspts[i].vel().lengthSquared();
+            airRes = m_mspts[i].vel();
+            if(airRes != ngl::Vec3(0.0f))
+            {
+                airRes.normalize();
+                airRes *= -1.0f * m_mspts[i].vel().lengthSquared();
+            }
+        }
+        else
+        {
+            airRes = ngl::Vec3(0.0f);
         }
         m_mspts[i].addForce((fgravity * m_mspts[i].mass()) + airRes + _externalf[i]);
     }
@@ -339,8 +346,8 @@ void Cloth::forceCalcPerTriangle(Triref _tr, bool _calcJacobians, bool _useJvel)
     rv = _tr.tri.rv();
     U = (ru.m_x * m_mspts[_tr.a].pos()) + (ru.m_y * m_mspts[_tr.b].pos()) + (ru.m_z * m_mspts[_tr.c].pos());
     V = (rv.m_x * m_mspts[_tr.a].pos()) + (rv.m_y * m_mspts[_tr.b].pos()) + (rv.m_z * m_mspts[_tr.c].pos());
-    U = cleanNearZero(U);
-    V = cleanNearZero(V);
+    //U = cleanNearZero(U);
+    //V = cleanNearZero(V);
     // 1.2 - ACQUIRE STRAIN/STRESS VALUES
     auto strain = calcStrain(U, V);
     auto stress = calcStress(strain);
@@ -552,7 +559,7 @@ ngl::Vec3 Cloth::calcStrain(ngl::Vec3 _u, ngl::Vec3 _v)
     strain.m_y = 0.5f * (_v.dot(_v) - 1);
     strain.m_z = _u.dot(_v);
     // enforce strain uu and vv > 0, uv > offset, and handle near-zero values
-    strain = cleanNearZero(strain);
+    //strain = cleanNearZero(strain);
     if(strain.m_x < 0.0f)
     {
         strain.m_x = 0.0f;
@@ -598,7 +605,7 @@ ngl::Vec3 Cloth::calcStress(ngl::Vec3 _strain)
     stress.m_y = m_warp(_strain.m_y);
     stress.m_z = m_shear(_strain.m_z - m_shearOffset);
     // enforce stress uu and vv > 0, and handle near-zero values
-    stress = cleanNearZero(stress);
+    //stress = cleanNearZero(stress);
     if(stress.m_x < 0.0f)
     {
         stress.m_x = 0.0f;

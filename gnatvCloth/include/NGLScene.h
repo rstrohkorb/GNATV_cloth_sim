@@ -93,6 +93,18 @@ public slots:
      * @brief turn on/off the wind
     */
     void toggleWind(bool _isWindOn);
+    /**
+     * @brief run force/displacement test in weft direction
+    */
+    void runWeftTest();
+    /**
+     * @brief run force/displacement test in warp direction
+    */
+    //void runWarpTest();
+    /**
+     * @brief run force/displacement test in shear direction
+    */
+    //void runShearTest();
 
 private:
     /**
