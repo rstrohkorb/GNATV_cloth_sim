@@ -11,7 +11,7 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent), m_ui(new Ui::MainW
 {
   m_ui->setupUi(this);
 
-  m_gl=new  NGLScene(this);
+  m_gl = new NGLScene(this);
 
   // SIGNALS AND SLOTS
   m_ui->s_mainWindowGridLayout->addWidget(m_gl,0,0,2,1);
