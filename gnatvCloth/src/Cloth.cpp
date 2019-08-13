@@ -166,7 +166,7 @@ void Cloth::update(float _h, bool _useRK4, bool _gravityOn, std::vector<ngl::Vec
     // STEP 0 - ZERO OUT CURRENT FORCES/JACOBIANS ON EACH MASSPOINT
     nullForces();
     // STEP 1 - FORCE CALCULATIONS
-    forceCalc(_h, _gravityOn, _externalf, true, useJvel);
+    forceCalc(_gravityOn, _externalf, true, useJvel);
     // STEP 2 - LET'S INTEGRATE
     if(_useRK4)
     {
@@ -217,6 +217,52 @@ std::vector<bool> Cloth::isCornerFixed() const
         cornerFixed.push_back(m_mspts[i].fixed());
     }
     return cornerFixed;
+}
+
+void Cloth::newtonRelax()
+{
+    // make sure all the forces/jacobians are reset
+    nullForces();
+    // run a force calculation on the current state (no gravity, no externalf)
+    std::vector<ngl::Vec3> externalf;
+    externalf.resize(m_mspts.size());
+    forceCalc(false, externalf, true);
+    // lambda for calculating the length squared of the force vector
+    auto forceLength = [this]() -> float
+    {
+            float total;
+            for(auto m : m_mspts)
+            {
+                total += m.forces().lengthSquared();
+            }
+            return total;
+    };
+    // starting guess is current positions
+    std::vector<ngl::Vec3> x;
+    x.reserve(m_mspts.size());
+    for(auto m : m_mspts)
+    {
+        x.push_back(m.pos());
+    }
+    // while loop for the iterations
+    float forceMagnitude = forceLength();
+    size_t k = 0;
+    while(forceMagnitude > 1e-5f)
+    {
+        // need to solve for delta x : J * deltax = -F
+        auto deltax = sor();
+        // update x and masspoint positions
+        for(size_t i = 0; i < x.size(); ++i)
+        {
+            x[i] += deltax[i];
+            m_mspts[i].setPos(x[i]);
+        }
+        // redo the force calculations
+        nullForces();
+        forceCalc(false, externalf, true);
+        forceMagnitude = forceLength();
+        ++k;
+    }
 }
 
 void Cloth::readObj(std::string _filename)
@@ -301,7 +347,7 @@ void Cloth::nullForces()
     }
 }
 
-void Cloth::forceCalc(float _h, bool _gravityOn, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel)
+void Cloth::forceCalc(bool _gravityOn, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel)
 {
     // Internal force calculations per triangle
     for(auto tr : m_triangles)
@@ -346,8 +392,8 @@ void Cloth::forceCalcPerTriangle(Triref _tr, bool _calcJacobians, bool _useJvel)
     rv = _tr.tri.rv();
     U = (ru.m_x * m_mspts[_tr.a].pos()) + (ru.m_y * m_mspts[_tr.b].pos()) + (ru.m_z * m_mspts[_tr.c].pos());
     V = (rv.m_x * m_mspts[_tr.a].pos()) + (rv.m_y * m_mspts[_tr.b].pos()) + (rv.m_z * m_mspts[_tr.c].pos());
-    //U = cleanNearZero(U);
-    //V = cleanNearZero(V);
+    U = cleanNearZero(U);
+    V = cleanNearZero(V);
     // 1.2 - ACQUIRE STRAIN/STRESS VALUES
     auto strain = calcStrain(U, V);
     auto stress = calcStress(strain);
@@ -486,6 +532,65 @@ std::vector<ngl::Vec3> Cloth::conjugateGradient(float _h, bool _useJvel, bool _u
     return x;
 }
 
+std::vector<ngl::Vec3> Cloth::sor()
+{
+    // set initial values
+    std::vector<ngl::Vec3> b, r, phi, Ap;
+    b.reserve(m_mspts.size());
+    r.reserve(m_mspts.size());
+    phi.resize(m_mspts.size());
+    Ap.reserve(m_mspts.size());
+    for(auto m : m_mspts)
+    {
+        b.push_back(-1.0f * m.forces());
+    }
+    r = b;
+    // use filter to account for fixed points
+    filter(r);
+    // test values for loop
+    float rs, omega;
+    rs = vecVecDotOp(r, r);
+    omega = 0.5f;
+    double epsilon = 1e-10;
+    size_t k = 0;
+    // run successive over-relaxation method
+    while(sqrt(static_cast<double>(rs)) > epsilon)
+    {
+        for(size_t i = 0; i < m_mspts.size(); ++i)
+        {
+            // do the j-matrix mult
+            // grab the values of _vec needed for multiplying with the J-matrices of this mass
+            std::unordered_map<size_t, ngl::Vec3> phiPass;
+            auto keys = m_mspts[i].jacobianKeys();
+            for(auto k : keys)
+            {
+                phiPass[k] = phi[k];
+            }
+            // pass them into the masspoint for the vector multiplication
+            auto sigma = m_mspts[i].jacobianVectorMult(false, false, false, phiPass);
+            // compute omega / diag (j)
+            // THIS BREAKS THE ALGORITHM since j has zero in diags
+            // TIME TO GIVE UP
+            auto omegaDiag = m_mspts[i].getJposDiag();
+            omegaDiag.m_x = omega / omegaDiag.m_x;
+            omegaDiag.m_y = omega / omegaDiag.m_y;
+            omegaDiag.m_z = omega / omegaDiag.m_z;
+            // compute phi[i] based on sigma
+            phi[i] = ((1 - omega) * phi[i]) + (omegaDiag * (b[i] - sigma));
+        }
+        // update r, rs
+        Ap = jMatrixMultOp(false, false, false, 1.0f, phi);
+        for(size_t i = 0; i < r.size(); ++i)
+        {
+            r[i] = b[i] - Ap[i];
+        }
+        // might want to filter phi here
+        rs = vecVecDotOp(r, r);
+        ++k;
+    }
+    return phi;
+}
+
 void Cloth::rk4Integrate(float _h, bool _gravityOn, std::vector<ngl::Vec3> _externalf)
 {
     std::vector<ngl::Vec3> initpos, initvel, k1pos, k1vel, k2pos, k2vel, k3pos, k3vel, k4pos, k4vel;
@@ -504,7 +609,7 @@ void Cloth::rk4Integrate(float _h, bool _gravityOn, std::vector<ngl::Vec3> _exte
         m_mspts[i].setVel(initvel[i] + (k1vel[i] * _h * 0.5f));
     }
     nullForces();
-    forceCalc(_h, _gravityOn, _externalf, false);
+    forceCalc(_gravityOn, _externalf, false);
     // 3.2 - DETERMINE K2 VALUES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
@@ -518,7 +623,7 @@ void Cloth::rk4Integrate(float _h, bool _gravityOn, std::vector<ngl::Vec3> _exte
         m_mspts[i].setVel(initvel[i] + (k2vel[i] * _h * 0.5f));
     }
     nullForces();
-    forceCalc(_h, _gravityOn, _externalf, false);
+    forceCalc(_gravityOn, _externalf, false);
     // 3.3 - DETERMINE K3 VALUES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
@@ -532,7 +637,7 @@ void Cloth::rk4Integrate(float _h, bool _gravityOn, std::vector<ngl::Vec3> _exte
         m_mspts[i].setVel(initvel[i] + (k3vel[i] * _h));
     }
     nullForces();
-    forceCalc(_h, _gravityOn, _externalf, false);
+    forceCalc(_gravityOn, _externalf, false);
     // 3.4 - DETERMINE K4 VALUES
     for(size_t i = 0; i < m_mspts.size(); ++i)
     {
@@ -559,7 +664,7 @@ ngl::Vec3 Cloth::calcStrain(ngl::Vec3 _u, ngl::Vec3 _v)
     strain.m_y = 0.5f * (_v.dot(_v) - 1);
     strain.m_z = _u.dot(_v);
     // enforce strain uu and vv > 0, uv > offset, and handle near-zero values
-    //strain = cleanNearZero(strain);
+    strain = cleanNearZero(strain);
     if(strain.m_x < 0.0f)
     {
         strain.m_x = 0.0f;
@@ -605,7 +710,7 @@ ngl::Vec3 Cloth::calcStress(ngl::Vec3 _strain)
     stress.m_y = m_warp(_strain.m_y);
     stress.m_z = m_shear(_strain.m_z - m_shearOffset);
     // enforce stress uu and vv > 0, and handle near-zero values
-    //stress = cleanNearZero(stress);
+    stress = cleanNearZero(stress);
     if(stress.m_x < 0.0f)
     {
         stress.m_x = 0.0f;
@@ -749,7 +854,7 @@ std::vector<ngl::Vec3> Cloth::jMatrixMultOp(const bool _isA, const bool _useJvel
     {
         // grab the values of _vec needed for multiplying with the J-matrices of this mass
         std::unordered_map<size_t, ngl::Vec3> vecPass;
-        auto keys = m_mspts[i].jacobainKeys();
+        auto keys = m_mspts[i].jacobianKeys();
         for(auto k : keys)
         {
             vecPass[k] = _vec[k];

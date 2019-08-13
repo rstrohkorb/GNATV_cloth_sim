@@ -120,14 +120,6 @@ public:
      * @param _externalf any non-gravity external forces acting on the masspoints
     */
     void update(float _h, bool _useRK4, bool _gravityOn, std::vector<ngl::Vec3> _externalf);
-    /**
-     * @brief calculates the internal forces acting on the cloth's masspoints
-     * @param _h time setp
-     * @param _externalf non-gravity external forces acting on the masspoints
-     * @param _calcJacobians whether or not the jacobians should be calculated
-     * @param _useJvel whether or not the velocity jacobians should be calculated
-    */
-    void forceCalc(float _h, bool _gravityOn, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel = false);
 
     // FIX POINT OPERATORS
     /**
@@ -141,6 +133,20 @@ public:
      * @brief returns a list of bool values recording whether or not a 'corner' is fixed
     */
     std::vector<bool> isCornerFixed() const;
+
+    // READ/ADJUST CLOTH STATE
+    /**
+     * @brief calculates the internal forces acting on the cloth's masspoints
+     * @param _externalf non-gravity external forces acting on the masspoints
+     * @param _calcJacobians whether or not the jacobians should be calculated
+     * @param _useJvel whether or not the velocity jacobians should be calculated
+    */
+    void forceCalc(bool _gravityOn, std::vector<ngl::Vec3> _externalf, bool _calcJacobians, bool _useJvel = false);
+    /**
+     * @brief run newton iterative relaxations on the cloth object
+     * Intended for use after the user adjusts cloth point positions in order to maintain cloth stability
+    */
+    void newtonRelax();
 
 private:
     // STRUCT
@@ -179,6 +185,12 @@ private:
      * @param _useDamping whether or not damping is being used
     */
     std::vector<ngl::Vec3> conjugateGradient(float _h, bool _useJvel, bool _useDamping);
+    /**
+     * @brief solves for change in position during the newtonian relaxation (successive over-relaxation)
+     *
+     * Solves linear system present in Newton relaxation. For Ax = b, A = J, b = -F, x = change in position
+    */
+    std::vector<ngl::Vec3> sor();
     /**
      * @brief runs explicit RK4 integration on the cloth object
      * @param _h time step

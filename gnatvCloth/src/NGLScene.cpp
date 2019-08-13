@@ -236,6 +236,24 @@ void NGLScene::toggleWind(bool _isWindOn)
     m_ci.setWindState(_isWindOn);
 }
 
+void NGLScene::setCornerX(double _x)
+{
+    m_ci.setClothPtPos(1, ngl::Vec3(static_cast<float>(_x), 0.0f, 0.0f));
+    update();
+}
+
+void NGLScene::setCornerY(double _y)
+{
+    m_ci.setClothPtPos(1, ngl::Vec3(0.0f, static_cast<float>(_y), 0.0f));
+    update();
+}
+
+void NGLScene::setCornerZ(double _z)
+{
+    m_ci.setClothPtPos(1, ngl::Vec3(0.0f, 0.0f, static_cast<float>(_z)));
+    update();
+}
+
 void NGLScene::runWeftTest()
 {
     m_ci.runWeftTest();

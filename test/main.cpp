@@ -68,7 +68,7 @@ TEST(MassPoint,forceModifiers)
     m.setFixed(true);
     EXPECT_TRUE(m.forces() == ngl::Vec3(0.0f));
     m.addForce(ngl::Vec3(3.0f));
-    EXPECT_TRUE(m.forces() == ngl::Vec3(0.0f));
+    EXPECT_TRUE(m.forces() == ngl::Vec3(3.0f));
 }
 
 TEST(MassPoint,addPositionJacobian)
@@ -109,7 +109,7 @@ TEST(MassPoint,jacobianKeys)
 
     std::vector<size_t> keytest;
     keytest.push_back(2);
-    EXPECT_TRUE(m.jacobainKeys() == keytest); 
+    EXPECT_TRUE(m.jacobianKeys() == keytest);
 }
 
 TEST(MassPoint,resetJacobians)

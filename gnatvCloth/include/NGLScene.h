@@ -94,6 +94,19 @@ public slots:
     */
     void toggleWind(bool _isWindOn);
     /**
+     * @brief set x position of corner 1 and run newton relaxation
+    */
+    void setCornerX(double _x);
+    /**
+     * @brief set y position of corner 1 and run newton relaxation
+    */
+    void setCornerY(double _y);
+    /**
+     * @brief set z position of corner 1 and run newton relaxation
+    */
+    void setCornerZ(double _z);
+
+    /**
      * @brief run force/displacement test in weft direction
     */
     void runWeftTest();

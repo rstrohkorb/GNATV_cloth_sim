@@ -65,7 +65,7 @@ void MassPoint::addForce(const ngl::Vec3 _force)
     }
 }
 
-std::vector<size_t> MassPoint::jacobainKeys() const
+std::vector<size_t> MassPoint::jacobianKeys() const
 {
     std::vector<size_t> keys;
     keys.reserve(m_jacobians.size());
@@ -152,9 +152,11 @@ ngl::Vec3 MassPoint::jacobianVectorMult(const bool _isA, const bool _useJvel, co
                                         std::unordered_map<size_t, ngl::Vec3> _vec, float _h)
 {
     ngl::Vec3 result = ngl::Vec3(0.0f);
-    for(auto &pair : m_jacobians)
+    // run loop to go through all jacobians
+    for(auto pair : m_jacobians)
     {
         ngl::Mat3 jmat = pair.second.Jpos;
+        // A = M - jvel - jpos
         if(_isA)
         {
             jmat *= -1.0f;
@@ -169,6 +171,7 @@ ngl::Vec3 MassPoint::jacobianVectorMult(const bool _isA, const bool _useJvel, co
                 jmat.m_00 += m_mass;
                 jmat.m_11 += m_mass;
                 jmat.m_22 += m_mass;
+                // A = (M - jvel - jpos) + (nhC)I
                 if(_useDamping)
                 {
                     auto n = m_jacobians.size() - 1;
@@ -181,6 +184,7 @@ ngl::Vec3 MassPoint::jacobianVectorMult(const bool _isA, const bool _useJvel, co
         }
         else
         {
+            // for Jvt, J = J + (hC)I
             if(_useDamping && (pair.first == m_self))
             {
                 jmat.m_00 += (_h * m_dampingCoefficient);
@@ -188,6 +192,7 @@ ngl::Vec3 MassPoint::jacobianVectorMult(const bool _isA, const bool _useJvel, co
                 jmat.m_22 += (_h * m_dampingCoefficient);
             }
         }
+        // add multiplication to final result
         result += jmat * _vec[pair.first];
     }
     return result;

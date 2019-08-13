@@ -103,6 +103,10 @@ public:
      * @brief turns wind on/off
     */
     void setWindState(bool _isWindOn) { m_windOn = _isWindOn; }
+    /**
+     * @brief sets the given cloth point to the given position and relaxes the model
+    */
+    void setClothPtPos(size_t _id, ngl::Vec3 _pos);
 
     // RUN CLOTH SIM
     /**

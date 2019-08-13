@@ -131,6 +131,20 @@
          </property>
         </widget>
        </item>
+       <item row="1" column="2">
+        <widget class="QComboBox" name="m_intMethodSelect">
+         <item>
+          <property name="text">
+           <string>CGM (implicit)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>RK4 (explicit)</string>
+          </property>
+         </item>
+        </widget>
+       </item>
        <item row="0" column="1">
         <widget class="QLabel" name="label_5">
          <property name="text">
@@ -145,18 +159,47 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="2">
-        <widget class="QComboBox" name="m_intMethodSelect">
-         <item>
-          <property name="text">
-           <string>CGM (implicit)</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>RK4 (explicit)</string>
-          </property>
-         </item>
+       <item row="6" column="0">
+        <widget class="QDoubleSpinBox" name="m_cornerX">
+         <property name="minimum">
+          <double>-20.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>20.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>5.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QDoubleSpinBox" name="m_cornerY">
+         <property name="minimum">
+          <double>-20.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>20.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2">
+        <widget class="QDoubleSpinBox" name="m_cornerZ">
+         <property name="minimum">
+          <double>-20.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>20.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>5.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="3">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Adjust Starting Corner Position</string>
+         </property>
         </widget>
        </item>
       </layout>

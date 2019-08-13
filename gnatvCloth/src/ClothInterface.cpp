@@ -179,6 +179,12 @@ void ClothInterface::setFixPtSetup(FixPtSetup _fixpt)
     fixClothPts();
 }
 
+void ClothInterface::setClothPtPos(size_t _id, ngl::Vec3 _pos)
+{
+    m_cloth.setPosAtPoint(_id, _pos);
+    m_cloth.newtonRelax();
+}
+
 void ClothInterface::updateCloth(float _h)
 {
     // make external forces

@@ -125,7 +125,7 @@ public:
     /**
      * @brief fetches all the id keys for currently stored jacobians
     */
-    std::vector<size_t> jacobainKeys() const;
+    std::vector<size_t> jacobianKeys() const;
     /**
      * @brief zeros out all currently stored jacobians
     */
@@ -151,7 +151,7 @@ public:
     */
     void multJvel(const float _h);
     /**
-     * @brief multiply the input vector by our jacobian vector
+     * @brief multiply the input vector by our jacobian matrix
      * @param _isA whether or not the operation uses A = (M - Jvel - Jpos) or just Jpos
      * @param _useJvel whether or not the A matrix should contain the Jvel matrix in its operation
      * @param _useDamping whether or not damping should be used

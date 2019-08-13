@@ -25,22 +25,12 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent), m_ui(new Ui::MainW
   connect(m_ui->m_configSelect, SIGNAL(currentIndexChanged(int)), m_gl, SLOT(changeConfig(int)));
   connect(m_ui->m_fixptSelect, SIGNAL(currentIndexChanged(int)), m_gl, SLOT(changeFixpt(int)));
   connect(m_ui->m_intMethodSelect, SIGNAL(currentIndexChanged(int)), m_gl, SLOT(changeIntMethod(int)));
+  // starting position of corner 1
+  connect(m_ui->m_cornerX, SIGNAL(valueChanged(double)), m_gl, SLOT(setCornerX(double)));
+  connect(m_ui->m_cornerY, SIGNAL(valueChanged(double)), m_gl, SLOT(setCornerY(double)));
+  connect(m_ui->m_cornerZ, SIGNAL(valueChanged(double)), m_gl, SLOT(setCornerZ(double)));
   // weft/warp/shear tests
   connect(m_ui->m_runWeftTest, SIGNAL(clicked()), m_gl, SLOT(runWeftTest()));
-//  // set the rotation signals
-//  connect(m_ui->m_rotationX,SIGNAL(valueChanged(double)),m_gl,SLOT(setXRotation(double)));
-//  connect(m_ui->m_rotationY,SIGNAL(valueChanged(double)),m_gl,SLOT(setYRotation(double)));
-//  connect(m_ui->m_rotationZ,SIGNAL(valueChanged(double)),m_gl,SLOT(setZRotation(double)));
-//  /// set the scale signals
-//  connect(m_ui->m_scaleX,SIGNAL(valueChanged(double)),m_gl,SLOT(setXScale(double)));
-//  connect(m_ui->m_scaleY,SIGNAL(valueChanged(double)),m_gl,SLOT(setYScale(double)));
-//  connect(m_ui->m_scaleZ,SIGNAL(valueChanged(double)),m_gl,SLOT(setZScale(double)));
-//  /// set the position signals
-//  connect(m_ui->m_positionX,SIGNAL(valueChanged(double)),m_gl,SLOT(setXPosition(double)));
-//  connect(m_ui->m_positionY,SIGNAL(valueChanged(double)),m_gl,SLOT(setYPosition(double)));
-//  connect(m_ui->m_positionZ,SIGNAL(valueChanged(double)),m_gl,SLOT(setZPosition(double)));
-//  /// set the combo box index change signal
-//  connect(m_ui->m_objectSelection,SIGNAL(currentIndexChanged(int)),m_gl,SLOT(setObjectMode(int)));
 }
 
 MainWindow::~MainWindow()
