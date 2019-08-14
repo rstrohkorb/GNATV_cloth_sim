@@ -55,7 +55,7 @@ static std::vector<float> wool_shearData = {
     37.989f, 44.488f, 50.987f, 59.986f
 };
 
-// JUTE
+// JUTE - shear is broken so it doesn't work
 
 static float jute_mass = 0.42f;
 

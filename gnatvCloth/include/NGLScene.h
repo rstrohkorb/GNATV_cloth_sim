@@ -107,6 +107,10 @@ public slots:
     void setCornerZ(double _z);
 
     /**
+     * @brief reinit the cloth object to the data from the graph UI
+    */
+    void reinitClothToGraphs();
+    /**
      * @brief run force/displacement test in weft direction
     */
     void runWeftTest();

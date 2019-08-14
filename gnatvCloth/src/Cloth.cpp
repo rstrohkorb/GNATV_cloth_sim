@@ -22,8 +22,7 @@ Cloth::Cloth(material_type _mt)
         m_shear = boost::math::cubic_b_spline<float>(wool_shearData.begin(), wool_shearData.end(),
                                                      0.0f, wool_shearStep);
         m_shearOffset = wool_shearStart;
-    }
-    break;
+    } break;
     case JUTE:
     {
         m_mass = jute_mass;
@@ -34,8 +33,88 @@ Cloth::Cloth(material_type _mt)
         m_shear = boost::math::cubic_b_spline<float>(jute_shearData.begin(), jute_shearData.end(),
                                                      0.0f, jute_shearStep);
         m_shearOffset = jute_shearStart;
-    }
-    break;
+    } break;
+    case CUSTOM:
+    {
+        m_mass = wool_mass;
+        // read in from ui graph files
+        float custom_weftStart, custom_warpStart, custom_shearStart;
+        float custom_weftStep, custom_warpStep, custom_shearStep;
+        std::vector<float> custom_weftData, custom_warpData, custom_shearData;
+        std::ifstream in;
+        std::string line;
+        // weft file
+        in.open("graphsFromUI/weft_graphData.txt");
+        while(std::getline(in, line))
+        {
+            // split line
+            std::vector<std::string> res;
+            boost::split(res, line, [](char c){return c == ' ';});
+            if(res[0] == "start")
+            {
+                custom_weftStart = std::stof(res[1]);
+            }
+            else if(res[0] == "step")
+            {
+                custom_weftStep = std::stof(res[1]);
+            }
+            else
+            {
+                custom_weftData.push_back(std::stof(res[0]));
+            }
+        }
+        in.close();
+        // warp file
+        in.open("graphsFromUI/warp_graphData.txt");
+        while(std::getline(in, line))
+        {
+            // split line
+            std::vector<std::string> res;
+            boost::split(res, line, [](char c){return c == ' ';});
+            if(res[0] == "start")
+            {
+                custom_warpStart = std::stof(res[1]);
+            }
+            else if(res[0] == "step")
+            {
+                custom_warpStep = std::stof(res[1]);
+            }
+            else
+            {
+                custom_warpData.push_back(std::stof(res[0]));
+            }
+        }
+        in.close();
+        // shear file
+        in.open("graphsFromUI/shear_graphData.txt");
+        while(std::getline(in, line))
+        {
+            // split line
+            std::vector<std::string> res;
+            boost::split(res, line, [](char c){return c == ' ';});
+            if(res[0] == "start")
+            {
+                custom_shearStart = std::stof(res[1]);
+            }
+            else if(res[0] == "step")
+            {
+                custom_shearStep = std::stof(res[1]);
+            }
+            else
+            {
+                custom_shearData.push_back(std::stof(res[0]));
+            }
+        }
+        in.close();
+        // set the material properties
+        m_weft = boost::math::cubic_b_spline<float>(custom_weftData.begin(), custom_weftData.end(),
+                                                    custom_weftStart, custom_weftStep, 0.0f);
+        m_warp = boost::math::cubic_b_spline<float>(custom_warpData.begin(), custom_warpData.end(),
+                                                    custom_warpStart, custom_warpStep, 0.0f);
+        m_shear = boost::math::cubic_b_spline<float>(custom_shearData.begin(), custom_shearData.end(),
+                                                     0.0f, custom_shearStep);
+        m_shearOffset = custom_shearStart;
+    } break;
     }
 }
 

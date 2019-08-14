@@ -254,6 +254,11 @@ void NGLScene::setCornerZ(double _z)
     update();
 }
 
+void NGLScene::reinitClothToGraphs()
+{
+    m_ci.reinitClothToGraphs();
+}
+
 void NGLScene::runWeftTest()
 {
     m_ci.runWeftTest();

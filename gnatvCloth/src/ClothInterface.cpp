@@ -167,6 +167,14 @@ void ClothInterface::fixClothPts()
     m_cloth.fixCorners(whichFixPts);
 }
 
+void ClothInterface::reinitClothToGraphs()
+{
+    m_cloth.clear();
+    m_cloth = Cloth(CUSTOM);
+    initCloth();
+    fixClothPts();
+}
+
 void ClothInterface::setConfig(Config _config)
 {
     m_config = _config;
@@ -208,7 +216,8 @@ void ClothInterface::updateCloth(float _h)
         {
             for(size_t i = 0; i < externalf.size(); ++i)
             {
-                externalf[i] = m_windVector * dist(gen);
+                externalf[i].m_x = m_windVector.m_x * dist(gen);
+                externalf[i].m_z = m_windVector.m_z * dist(gen);
             }
         }
     }

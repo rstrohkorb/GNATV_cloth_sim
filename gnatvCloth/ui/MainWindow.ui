@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1148</width>
+    <width>1431</width>
     <height>656</height>
    </rect>
   </property>
@@ -15,12 +15,163 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="s_mainWindowGridLayout">
-    <item row="0" column="1">
+    <item row="0" column="0">
+     <spacer name="horizontalSpacer">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="0" column="3">
+     <layout class="QGridLayout" name="s_weftGraph">
+      <item row="0" column="0">
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="2">
+     <layout class="QGridLayout" name="s_warpGraph">
+      <item row="0" column="0">
+       <spacer name="horizontalSpacer_4">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="2">
      <widget class="QGroupBox" name="s_simOptions">
       <property name="title">
        <string>Simulation Options</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
+       <item row="4" column="0">
+        <widget class="QCheckBox" name="m_wireframe">
+         <property name="text">
+          <string>WireFrame</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>Fixed Points</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QComboBox" name="m_configSelect">
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <item>
+          <property name="text">
+           <string>Low Res XZ</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Low Res XY</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>High Res XZ</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>High Res XY</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QComboBox" name="m_intMethodSelect">
+         <item>
+          <property name="text">
+           <string>CGM (implicit)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>RK4 (explicit)</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QCheckBox" name="m_isWindOn">
+         <property name="text">
+          <string>Wind</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
+        <widget class="QPushButton" name="m_resetButton">
+         <property name="text">
+          <string>Reset</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QPushButton" name="m_stopButton">
+         <property name="text">
+          <string>Stop</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="m_startButton">
+         <property name="text">
+          <string>Start</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Cloth Config</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0" colspan="3">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Adjust Starting Corner Position</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>Integration</string>
+         </property>
+        </widget>
+       </item>
        <item row="1" column="1">
         <widget class="QComboBox" name="m_fixptSelect">
          <item>
@@ -62,187 +213,42 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QPushButton" name="m_startButton">
+       <item row="7" column="0" colspan="2">
+        <widget class="QPushButton" name="m_writeGraphButton">
          <property name="text">
-          <string>Start</string>
+          <string>Write Out Graph Data</string>
          </property>
         </widget>
        </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_4">
+       <item row="7" column="2">
+        <widget class="QPushButton" name="m_reinitClothButton">
          <property name="text">
-          <string>Cloth Config</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QPushButton" name="m_resetButton">
-         <property name="text">
-          <string>Reset</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QPushButton" name="m_stopButton">
-         <property name="text">
-          <string>Stop</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QComboBox" name="m_configSelect">
-         <property name="currentIndex">
-          <number>0</number>
-         </property>
-         <item>
-          <property name="text">
-           <string>Low Res XZ</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Low Res XY</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>High Res XZ</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>High Res XY</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QCheckBox" name="m_isWindOn">
-         <property name="text">
-          <string>Wind</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QCheckBox" name="m_wireframe">
-         <property name="text">
-          <string>WireFrame</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="2">
-        <widget class="QComboBox" name="m_intMethodSelect">
-         <item>
-          <property name="text">
-           <string>CGM (implicit)</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>RK4 (explicit)</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>Fixed Points</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="2">
-        <widget class="QLabel" name="label_6">
-         <property name="text">
-          <string>Integration</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <widget class="QDoubleSpinBox" name="m_cornerX">
-         <property name="minimum">
-          <double>-20.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>20.000000000000000</double>
-         </property>
-         <property name="value">
-          <double>5.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="1">
-        <widget class="QDoubleSpinBox" name="m_cornerY">
-         <property name="minimum">
-          <double>-20.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>20.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="2">
-        <widget class="QDoubleSpinBox" name="m_cornerZ">
-         <property name="minimum">
-          <double>-20.000000000000000</double>
-         </property>
-         <property name="maximum">
-          <double>20.000000000000000</double>
-         </property>
-         <property name="value">
-          <double>5.000000000000000</double>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="0" colspan="3">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Adjust Starting Corner Position</string>
+          <string>ReInit Cloth</string>
          </property>
         </widget>
        </item>
       </layout>
      </widget>
     </item>
-    <item row="1" column="1">
-     <widget class="QGroupBox" name="s_runTests">
-      <property name="title">
-       <string>Run Tests</string>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="15" column="0" colspan="2">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="14" column="0" colspan="2">
-        <widget class="QPushButton" name="m_colour">
-         <property name="text">
-          <string>Choose Colour</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0">
-        <widget class="QPushButton" name="m_runWeftTest">
-         <property name="text">
-          <string>Run Weft Test</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
+    <item row="1" column="3">
+     <layout class="QGridLayout" name="s_shearGraph">
+      <item row="0" column="0">
+       <spacer name="horizontalSpacer_3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
     </item>
-    <item row="0" column="0">
-     <spacer name="horizontalSpacer">
+    <item row="0" column="1">
+     <spacer name="horizontalSpacer_5">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
@@ -261,7 +267,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1148</width>
+     <width>1431</width>
      <height>25</height>
     </rect>
    </property>

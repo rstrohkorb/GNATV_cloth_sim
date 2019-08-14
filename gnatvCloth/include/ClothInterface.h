@@ -55,6 +55,10 @@ public:
      * @brief set up the fixed points in the cloth based on fixptsetup
     */
     void fixClothPts();
+    /**
+     * @brief reinit the cloth object to the graph data from the UI
+    */
+    void reinitClothToGraphs();
 
     // GETTERS
     /**

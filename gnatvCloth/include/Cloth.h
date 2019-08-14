@@ -19,7 +19,7 @@
  * @enum material_type
  * @brief different types of cloth data available for use in Materials.h
 */
-enum material_type { WOOL, JUTE };
+enum material_type { WOOL, JUTE, CUSTOM };
 
 /**
  * @class Cloth
@@ -30,8 +30,8 @@ class Cloth
 {
 public:
     // CONSTRUCTORS/INITIALIZERS
-    /*
-     * Delete the default constructor - cloth needs a material to be created.
+    /**
+     * delete default constructor
     */
     Cloth() = delete;
     /**
