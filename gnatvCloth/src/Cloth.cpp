@@ -197,7 +197,7 @@ void Cloth::writeToObj(std::string _filename)
     // create file
     std::ofstream obj;
     obj.open(_filename);
-    obj << "o GNATVCloth\n";
+    obj << "o Cloth\n";
     // write out vertex data
     for(auto m : m_mspts)
     {

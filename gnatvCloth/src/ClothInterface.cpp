@@ -206,8 +206,7 @@ void ClothInterface::updateCloth(float _h)
         for(size_t i = 0; i < externalf.size(); ++i)
         {
             auto windFactor = ((m_updateCount % 20)) + 1.0f;
-            externalf[i].m_x = m_windVector.m_x * dist(gen) * windFactor;
-            externalf[i].m_z = m_windVector.m_z * dist(gen) * windFactor;
+            externalf[i] = m_windVector * dist(gen) * windFactor;
         }
     }
     else
@@ -237,31 +236,6 @@ void ClothInterface::updateCloth(float _h)
 void ClothInterface::renderCloth(std::vector<float> &o_vertexData)
 {
     m_cloth.render(o_vertexData);
-}
-
-void ClothInterface::writeOutCloth()
-{
-    // update count - we want 4 places in the number, so leading 0's matter
-    std::string count;
-    if(m_updateCount < 10)
-    {
-        count = "000" + std::to_string(m_updateCount);
-    }
-    else if(m_updateCount < 100)
-    {
-        count = "00" + std::to_string(m_updateCount);
-    }
-    else if(m_updateCount < 1000)
-    {
-        count = "0" + std::to_string(m_updateCount);
-    }
-    else
-    {
-        count = std::to_string(m_updateCount);
-    }
-    std::string filename = "results/hangTestNormal/gnatvClothHang.";
-    filename = filename + count + ".obj";
-    m_cloth.writeToObj(filename);
 }
 
 void ClothInterface::runWeftTest()

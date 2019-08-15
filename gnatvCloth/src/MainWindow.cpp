@@ -29,7 +29,6 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent), m_ui(new Ui::MainW
   // toggle options slots
   connect(m_ui->m_wireframe, SIGNAL(toggled(bool)), m_gl, SLOT(toggleWireframe(bool)));
   connect(m_ui->m_isWindOn, SIGNAL(toggled(bool)), m_gl, SLOT(toggleWind(bool)));
-  connect(m_ui->m_writeToFile, SIGNAL(toggled(bool)), m_gl, SLOT(toggleWriteOut(bool)));
   // start/stop/reset sim slots
   connect(m_ui->m_startButton, SIGNAL(clicked()), m_gl, SLOT(startSim()));
   connect(m_ui->m_stopButton, SIGNAL(clicked()), m_gl, SLOT(stopSim()));
