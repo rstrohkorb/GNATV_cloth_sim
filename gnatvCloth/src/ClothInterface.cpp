@@ -238,6 +238,31 @@ void ClothInterface::renderCloth(std::vector<float> &o_vertexData)
     m_cloth.render(o_vertexData);
 }
 
+void ClothInterface::writeOutCloth()
+{
+    // update count - we want 4 places in the number, so leading 0's matter
+    std::string count;
+    if(m_updateCount < 10)
+    {
+        count = "000" + std::to_string(m_updateCount);
+    }
+    else if(m_updateCount < 100)
+    {
+        count = "00" + std::to_string(m_updateCount);
+    }
+    else if(m_updateCount < 1000)
+    {
+        count = "0" + std::to_string(m_updateCount);
+    }
+    else
+    {
+        count = std::to_string(m_updateCount);
+    }
+    std::string filename = "results/hangTestNormal/gnatvClothHang.";
+    filename = filename + count + ".obj";
+    m_cloth.writeToObj(filename);
+}
+
 void ClothInterface::runWeftTest()
 {
     // save previous settings

@@ -41,6 +41,10 @@ void NGLScene::timerEvent(QTimerEvent *_event)
 //    {
 //        m_cloth.update(0.001f, ngl::Vec3(0.0f));
 //    }
+    if(m_writeOut)
+    {
+        m_ci.writeOutCloth();
+    }
     m_ci.updateCloth(0.01f);
     update();
 }
@@ -234,6 +238,11 @@ void NGLScene::changeIntMethod(int _intm)
 void NGLScene::toggleWind(bool _isWindOn)
 {
     m_ci.setWindState(_isWindOn);
+}
+
+void NGLScene::toggleWriteOut(bool _writeOut)
+{
+    m_writeOut = _writeOut;
 }
 
 void NGLScene::setCornerX(double _x)

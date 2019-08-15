@@ -94,6 +94,10 @@ public slots:
     */
     void toggleWind(bool _isWindOn);
     /**
+     * @brief turn on/off writing out cloth to file
+    */
+    void toggleWriteOut(bool _writeOut);
+    /**
      * @brief set x position of corner 1 and run newton relaxation
     */
     void setCornerX(double _x);
@@ -171,6 +175,7 @@ private:
 
     bool m_wireframe = false;       /**< Whether or not the cloth is visualized in wireframe */
     int m_timerId;                  /**< Id for starting/stopping the timer */
+    bool m_writeOut = false;        /**< whether or not we're writing the cloth to file */
 };
 
 
