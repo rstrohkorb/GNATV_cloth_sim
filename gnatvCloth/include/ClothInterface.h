@@ -121,6 +121,10 @@ public:
      * @brief spit out cloth data to render
     */
     void renderCloth(std::vector<float> &o_vertexData);
+    /**
+     * @brief ask the cloth to write point data to obj
+    */
+    void writeOutCloth();
 
     // RUN FORCE/DISPLACEMENT TESTS
     /**
