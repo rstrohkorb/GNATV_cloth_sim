@@ -44,3 +44,4 @@ CMakeLists.txt.user*
 
 # don't commit the baked out stuff in the results folder
 /results/*
+/results/hangTestNormal/*
