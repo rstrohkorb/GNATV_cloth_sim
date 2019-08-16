@@ -15,98 +15,38 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="s_mainWindowGridLayout">
-    <item row="0" column="0">
-     <spacer name="horizontalSpacer">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="sizeHint" stdset="0">
-       <size>
-        <width>40</width>
-        <height>20</height>
-       </size>
-      </property>
-     </spacer>
-    </item>
-    <item row="0" column="3">
-     <layout class="QGridLayout" name="s_weftGraph">
-      <item row="0" column="0">
-       <spacer name="horizontalSpacer_2">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </item>
-    <item row="1" column="2">
-     <layout class="QGridLayout" name="s_warpGraph">
-      <item row="0" column="0">
-       <spacer name="horizontalSpacer_4">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </item>
     <item row="0" column="2">
      <widget class="QGroupBox" name="s_simOptions">
       <property name="title">
        <string>Simulation Options</string>
       </property>
       <layout class="QGridLayout" name="gridLayout">
+       <item row="3" column="1">
+        <widget class="QPushButton" name="m_stopButton">
+         <property name="text">
+          <string>Stop</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0" colspan="2">
+        <widget class="QPushButton" name="m_writeGraphButton">
+         <property name="text">
+          <string>Write Out Graph Data</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0" colspan="3">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Adjust YMax (Weft/Warp/Shear)</string>
+         </property>
+        </widget>
+       </item>
        <item row="4" column="0">
         <widget class="QCheckBox" name="m_wireframe">
          <property name="text">
           <string>WireFrame</string>
          </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLabel" name="label_5">
-         <property name="text">
-          <string>Fixed Points</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QComboBox" name="m_configSelect">
-         <property name="currentIndex">
-          <number>0</number>
-         </property>
-         <item>
-          <property name="text">
-           <string>Low Res XZ</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Low Res XY</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>High Res XZ</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>High Res XY</string>
-          </property>
-         </item>
         </widget>
        </item>
        <item row="1" column="2">
@@ -123,52 +63,17 @@
          </item>
         </widget>
        </item>
-       <item row="4" column="1">
-        <widget class="QCheckBox" name="m_isWindOn">
-         <property name="text">
-          <string>Wind</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="2">
-        <widget class="QPushButton" name="m_resetButton">
-         <property name="text">
-          <string>Reset</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QPushButton" name="m_stopButton">
-         <property name="text">
-          <string>Stop</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QPushButton" name="m_startButton">
-         <property name="text">
-          <string>Start</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_4">
-         <property name="text">
-          <string>Cloth Config</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0" colspan="3">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>Transfer Graph Data to Cloth</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="2">
         <widget class="QLabel" name="label_6">
          <property name="text">
           <string>Integration</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QCheckBox" name="m_isWindOn">
+         <property name="text">
+          <string>Wind</string>
          </property>
         </widget>
        </item>
@@ -206,24 +111,74 @@
          </item>
         </widget>
        </item>
-       <item row="2" column="0" colspan="3" alignment="Qt::AlignLeft">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Run Sim</string>
+       <item row="8" column="2">
+        <widget class="QDoubleSpinBox" name="m_shearXStep">
+         <property name="decimals">
+          <number>4</number>
+         </property>
+         <property name="value">
+          <double>0.010000000000000</double>
          </property>
         </widget>
        </item>
-       <item row="7" column="0" colspan="2">
-        <widget class="QPushButton" name="m_writeGraphButton">
+       <item row="7" column="0" colspan="3">
+        <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>Write Out Graph Data</string>
+          <string>Adjust XStep (Weft/Warp/Shear)</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="2">
-        <widget class="QPushButton" name="m_reinitClothButton">
+       <item row="8" column="0">
+        <widget class="QDoubleSpinBox" name="m_weftXStep">
+         <property name="decimals">
+          <number>4</number>
+         </property>
+         <property name="value">
+          <double>0.004000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0">
+        <widget class="QDoubleSpinBox" name="m_weftYMax">
+         <property name="maximum">
+          <double>5000.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>1052.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QComboBox" name="m_configSelect">
+         <property name="currentIndex">
+          <number>0</number>
+         </property>
+         <item>
+          <property name="text">
+           <string>Low Res XZ</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Low Res XY</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>High Res XZ</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>High Res XY</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="label_5">
          <property name="text">
-          <string>ReInit Cloth</string>
+          <string>Fixed Points</string>
          </property>
         </widget>
        </item>
@@ -234,6 +189,71 @@
          </property>
         </widget>
        </item>
+       <item row="10" column="1">
+        <widget class="QDoubleSpinBox" name="m_warpYMax">
+         <property name="maximum">
+          <double>5000.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>2998.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QDoubleSpinBox" name="m_warpXStep">
+         <property name="decimals">
+          <number>4</number>
+         </property>
+         <property name="value">
+          <double>0.000500000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Cloth Config</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2">
+        <widget class="QPushButton" name="m_reinitClothButton">
+         <property name="text">
+          <string>ReInit Cloth</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QPushButton" name="m_startButton">
+         <property name="text">
+          <string>Start</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
+        <widget class="QPushButton" name="m_resetButton">
+         <property name="text">
+          <string>Reset</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="3" alignment="Qt::AlignLeft">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Run Sim</string>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="2">
+        <widget class="QDoubleSpinBox" name="m_shearYMax">
+         <property name="maximum">
+          <double>200.000000000000000</double>
+         </property>
+         <property name="value">
+          <double>60.000000000000000</double>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>
@@ -241,6 +261,36 @@
      <layout class="QGridLayout" name="s_shearGraph">
       <item row="0" column="0">
        <spacer name="horizontalSpacer_3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item row="0" column="0">
+     <spacer name="horizontalSpacer">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>40</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item row="1" column="2">
+     <layout class="QGridLayout" name="s_warpGraph">
+      <item row="0" column="0" colspan="2">
+       <spacer name="horizontalSpacer_4">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -267,6 +317,23 @@
       </property>
      </spacer>
     </item>
+    <item row="0" column="3">
+     <layout class="QGridLayout" name="s_weftGraph">
+      <item row="0" column="0">
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -275,7 +342,7 @@
      <x>0</x>
      <y>0</y>
      <width>1431</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

@@ -44,6 +44,14 @@ public slots:
      * @brief output graph data to file so the cloth can read it
     */
     void outputGraphToFile();
+    /**
+     * @brief adjust xstep and update data accordingly
+    */
+    void setXStep(double _xstep);
+    /**
+     * @brief adjust ymax and update endpoint(s) accordingly
+    */
+    void setYMax(double _ymax);
 
 private slots:
     /**

@@ -165,6 +165,127 @@ void VisGraph::outputGraphToFile()
     out.close();
 }
 
+void VisGraph::setXStep(double _xstep)
+{
+    // change xstep
+    m_xStep = _xstep;
+    // change xmin/xmax (depends if shear)
+    if(m_type == SHEAR)
+    {
+        // find index of 0 0 in spline
+        auto originIndex = pointIndexSpline(closestPointSpline(QPointF(0.0, 0.0)));
+        // adjust xmin and xmax
+        m_xMin = -1.0 * originIndex * m_xStep;
+        m_xMax = (m_spline->points().size() - originIndex - 1) * m_xStep;
+    }
+    else
+    {
+        m_xMax = (m_spline->points().size() - 1) * m_xStep;
+    }
+    // determine index of highlight in spline curve
+    auto highlight_index = pointIndexSpline(closestPointSpline(m_highlight->at(0)));
+    // loop through points and adjust xval
+    for(int i = 0; i < m_spline->points().size(); ++i)
+    {
+        // determine new xval (changes if shear)
+        double newXVal;
+        if(m_type == SHEAR)
+        {
+            newXVal = (i * m_xStep) + m_xMin;
+        }
+        else
+        {
+            newXVal = i * m_xStep;
+        }
+        // current point
+        auto currentPt = m_spline->at(i);
+        // spline curve xval
+        m_spline->replace(i, newXVal, currentPt.y());
+        // basic/highlight xval
+        if(i == highlight_index)
+        {
+            m_highlight->replace(0, newXVal, currentPt.y());
+        }
+        else
+        {
+            auto oldPt = closestPointBasic(currentPt);
+            m_basic->replace(oldPt.x(), oldPt.y(), newXVal, currentPt.y());
+        }
+    }
+    // adjust x-position of the up/down plots
+    auto upPt = m_adjUp->at(0);
+    auto downPt = m_adjDown->at(0);
+    m_adjUp->replace(0, (2 * m_xStep) + m_xMin, upPt.y());
+    m_adjDown->replace(0, (2 * m_xStep) + m_xMin, downPt.y());
+    // after all this is done, update the x-axis
+    chart()->axes().front()->setMin(m_xMin);
+    chart()->axes().front()->setMax(m_xMax);
+}
+
+void VisGraph::setYMax(double _ymax)
+{
+    // update ymin, ymax, ystep
+    m_yMax = _ymax;
+    if(m_type == SHEAR)
+    {
+        m_yMin = -1.0 * _ymax;
+        m_yStep = (m_yMax * 2) / m_spline->points().size();
+    }
+    else
+    {
+        m_yStep = m_yMax / m_spline->points().size();
+    }
+    // check if the highlight point is an endpoint
+    bool highlightLeft, highlightRight = false;
+    auto highlight_index = pointIndexSpline(closestPointSpline(m_highlight->at(0)));
+    if(highlight_index == 0)
+    {
+        highlightLeft = true;
+    }
+    else if(highlight_index == (m_spline->points().size() - 1))
+    {
+        highlightRight = true;
+    }
+    // if we're shear, adjust left endpoint
+    if(m_type == SHEAR)
+    {
+        auto oldPt = m_spline->at(0);
+        m_spline->replace(0, oldPt.x(), m_yMin);
+        if(highlightLeft)
+        {
+            oldPt = m_highlight->at(0);
+            m_highlight->replace(0, oldPt.x(), m_yMin);
+        }
+        else
+        {
+            oldPt = closestPointBasic(m_spline->at(0));
+            m_basic->replace(oldPt.x(), oldPt.y(), oldPt.x(), m_yMin);
+        }
+    }
+    // adjust right endpoint
+    auto oldPt = m_spline->points().back();
+    auto ri = m_spline->points().size() - 1;
+    m_spline->replace(ri, oldPt.x(), m_yMax);
+    if(highlightRight)
+    {
+        oldPt = m_highlight->at(0);
+        m_highlight->replace(0, oldPt.x(), m_yMax);
+    }
+    else
+    {
+        oldPt = closestPointBasic(m_spline->at(ri));
+        m_basic->replace(oldPt.x(), oldPt.y(), oldPt.x(), m_yMax);
+    }
+    // adjust y-position of the up/down plots
+    auto upPt = m_adjUp->at(0);
+    auto downPt = m_adjDown->at(0);
+    m_adjUp->replace(0, upPt.x(), m_yMax - m_yStep*2);
+    m_adjDown->replace(0, downPt.x(), m_yMax - (6 * m_yStep));
+    // update the y-axis
+    chart()->axes().back()->setMin(m_yMin);
+    chart()->axes().back()->setMax(m_yMax);
+}
+
 void VisGraph::selectPoint(const QPointF &point)
 {
     // remove point from m_highlight and add back to m_basic

@@ -205,8 +205,9 @@ void ClothInterface::updateCloth(float _h)
         // create gusts of wind in the xz direction
         for(size_t i = 0; i < externalf.size(); ++i)
         {
-            auto windFactor = ((m_updateCount % 20)) + 1.0f;
-            externalf[i] = m_windVector * dist(gen) * windFactor;
+            auto windFactor = (((m_updateCount % 20)) + 1.0f)/3.0f;
+            externalf[i].m_x = m_windVector.m_x * dist(gen) * windFactor;
+            externalf[i].m_z = m_windVector.m_z * dist(gen) * windFactor;
         }
     }
     else
@@ -258,7 +259,7 @@ void ClothInterface::writeOutCloth()
     {
         count = std::to_string(m_updateCount);
     }
-    std::string filename = "results/hangTestNormal/gnatvClothHang.";
+    std::string filename = "results/increaseY/warpYMax.";
     filename = filename + count + ".obj";
     m_cloth.writeToObj(filename);
 }

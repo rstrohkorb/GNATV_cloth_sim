@@ -44,6 +44,14 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent), m_ui(new Ui::MainW
   connect(m_ui->m_writeGraphButton, SIGNAL(clicked()), m_shearChartView, SLOT(outputGraphToFile()));
   // reinit cloth to written out grpah data
   connect(m_ui->m_reinitClothButton, SIGNAL(clicked()), m_gl, SLOT(reinitClothToGraphs()));
+  // change xstep in graphs
+  connect(m_ui->m_weftXStep, SIGNAL(valueChanged(double)), m_weftChartView, SLOT(setXStep(double)));
+  connect(m_ui->m_warpXStep, SIGNAL(valueChanged(double)), m_warpChartView, SLOT(setXStep(double)));
+  connect(m_ui->m_shearXStep, SIGNAL(valueChanged(double)), m_shearChartView, SLOT(setXStep(double)));
+  // change ymax in graphs
+  connect(m_ui->m_weftYMax, SIGNAL(valueChanged(double)), m_weftChartView, SLOT(setYMax(double)));
+  connect(m_ui->m_warpYMax, SIGNAL(valueChanged(double)), m_warpChartView, SLOT(setYMax(double)));
+  connect(m_ui->m_shearYMax, SIGNAL(valueChanged(double)), m_shearChartView, SLOT(setYMax(double)));
 //  // starting position of corner 1
 //  connect(m_ui->m_cornerX, SIGNAL(valueChanged(double)), m_gl, SLOT(setCornerX(double)));
 //  connect(m_ui->m_cornerY, SIGNAL(valueChanged(double)), m_gl, SLOT(setCornerY(double)));
