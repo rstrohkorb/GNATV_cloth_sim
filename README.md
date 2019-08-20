@@ -1,12 +1,24 @@
 # GNATV_cloth_sim
 General Nonlinear Anisotropic Tensile Viscoelasticity Cloth Sim, implimented from Volino &amp; Magnenat-Thalmann 2009
+Author: Rachel Strohkorb
 
-Some updates:
-UI is here! Unfortunately, sim is slow on the hires objects, so I'm going to add options to bake out sequences. Also going to try to go back to my old Mass-Spring build to grab some comparison renders/playbacks.
+This project contains a cloth simulator based on force-displacement data taken from actual cloth samples. All the underlying math
+for the force calculations can be found in [3]. I implimented the implicit integration found in [1] and used the damping model from [2].
+This sim does not include collisions.
 
-Conjugate gradient works now! It explodes without damping, but with damping converges very slowly. This would be better if I had data relating change in strain to stress, but I don't have that, so I can settle for slow.
+To run, you will need Qt to run qmake. You will also need NGL (found here: https://github.com/NCCA/NGL), a graphics library
+written by Jon Macey for the NCCA at Bournemouth University, as well as boost for both its string parser and b-spline interpolator.
 
-Rk4 works now! Provided the starting state gives an outlet for forces in all 3 directions. 
-Given an XY-plane starting cloth, there's no reason for any masspoints to venture into z-space if there's no external force goading them into it. Requires an external force in the z-direction to work, or an initial configuration that doesn't align all the points to a single plane.
+A NOTE:
 
-Boost makes my life frustrating, but whatever, their cubic b-spline interpolator is nice.
+I've organized this project into a 'dirty' branch and the 'clean' master branch. I tried a lot of different things with this project, many
+of which did not work, and the methods from those attempts stuck around. The 'clean' master branch does not contain any of these residual methods,
+but the 'dirty' branch does, just as a way for me to keep the old attempts as an example.
+
+CITATIONS:
+
+[1] D. Baraff, A.Witkin, 1998, Large Steps in Cloth Simulation. Computer Graphics (SIGGRAPH’98 proceedings), ACM Press, pp 43-54.
+
+[2] Kang, Y. M., and Cho, H. G., 2002, Complex deformable objects in virtual reality. VRST '02 Proceedings of the ACM symposium on Virtual reality software and technology, ACM, 49-56.
+
+[3] P. Volino, N. Magnenat-Thalmann, F. Faure, 2009, A Simple Approach to Nonlinear Tensile Stiffness for Accurate Cloth Simulation. ACM Transactions on Graphics, Association for Computing Machinery, 28(4).
